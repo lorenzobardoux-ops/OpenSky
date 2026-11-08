@@ -123,7 +123,8 @@ pick an icon, optionally lock it with a PIN, then **Restart now**. Edit or remov
   "holidays": "US",
   "occasions": [ { "name": "Anniversary", "month": 6, "day": 14 } ],
   "birthdaysFromCalendar": true,
-  "sports": { "league": "nfl", "team": "NE" }
+  "sports": { "league": "nfl", "team": "NE" },
+  "f1": true
 }
 ```
 - The top-right pill counts down to the next holiday, occasion or birthday.
@@ -133,6 +134,12 @@ pick an icon, optionally lock it with a PIN, then **Restart now**. Edit or remov
 - `sports`: on game day, a pill shows your team's game, time and channel, then the live score.
   - Leagues: `nfl`, `college-football`, `nba`, `wnba`, `mens-college-basketball`, `mlb`, `nhl`, `mls`, `nwsl`, `epl`.
   - `team` is the short code shown on scoreboards (`NE`, `BOS`, `LAL`…). Leave it `""` for no sports pill.
+- `f1: true`: a pill with the next Formula 1 race and the days until it ("tomorrow"; on race day its start time),
+  until 3 hours after the start. Phone page: Extras → Formula 1. The calendar comes from Jolpica
+  (api.jolpi.ca, free, no key), asked on Mondays and kept in `config/calendar-cache/`, so it works offline too.
+  Race names are in the screen's language ("Großer Preis von Monaco").
+- `birthdaysFromCalendar` also counts "Geburtstag" in a title.
+
 
 ## Calendars
 OpenSky can show any number of calendars, each with its own color. Some can also be **added to and edited from the screen**.

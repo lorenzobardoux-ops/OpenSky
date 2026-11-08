@@ -108,7 +108,9 @@ ok("19 German: sidebar, header, timer buttons and keyboard in German; dates de-D
   JSON.stringify(sideDe) === JSON.stringify(["Start", "Kalender", "Listen", "Timer"]) && mod(de, "MMM-OpenSky-Header").config.title === "Unsere Familie" &&
   mod(de, "MMM-OpenSky-Timer").config.quickAddButtons[0].label === "+5 Min." && mod(de, "MMM-OpenSky-Keyboard").config.layout === "de" && de.locale === "de-DE" && de.language === "de",
   { sideDe, kb: mod(de, "MMM-OpenSky-Keyboard").config.layout });
-const en = build({ pages: ["home", "calendar"] });
+const en = build({ pages: ["home", "calendar"], header: { f1: true } });
+ok("21 header.f1 reaches the header (off unless true)", mod(en, "MMM-OpenSky-Header").config.f1 === true && mod(de, "MMM-OpenSky-Header").config.f1 === false);
+
 ok("20 English stays the default", mod(en, "MMM-OpenSky-Sidebar").config.pages[0].label === "Home" && mod(en, "MMM-OpenSky-Keyboard").config.layout === "en" && en.language === "en");
 
 

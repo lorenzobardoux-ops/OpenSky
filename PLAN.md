@@ -23,7 +23,7 @@ can install, configure and extend.
 
 ## Scope
 - In: Home (week + lists + photos), Calendar (month/week, add/edit), Lists, Timer, Smart Home page, Settings,
-  sidebar, header pills (countdown, sports), curbside pickup icons, Wordle-style daily game, sleep/wake.
+  sidebar, header pills (countdown, sports, Formula 1), curbside pickup icons, Wordle-style daily game, sleep/wake.
 - Later (add-on): **Food** (restaurants nearby).
 - Out: the reference build's finance page. (A generic "PIN-locked embedded page" may come back as an option.)
 

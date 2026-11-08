@@ -267,7 +267,9 @@ const fixed = [
         custom: Array.isArray(header.occasions) ? header.occasions : [],
         birthdays: header.birthdaysFromCalendar !== false
       },
-      sports: header.sports && header.sports.team ? { league: header.sports.league || "nfl", team: header.sports.team } : null
+      sports: header.sports && header.sports.team ? { league: header.sports.league || "nfl", team: header.sports.team } : null,
+      f1: header.f1 === true
+
     }
   },
   {

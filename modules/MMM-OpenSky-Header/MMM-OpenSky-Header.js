@@ -24,6 +24,9 @@ Module.register("MMM-OpenSky-Header", {
     this.wxId = null;
     this.game = null;
     if (this.config.sports && this.config.sports.team) this.pollGame();
+    // Formula 1: the next race (the Pi asks the calendar on Mondays; asking it here every 6 hours costs nothing)
+    this.f1 = null;
+    if (this.config.f1) { this.pollF1(); setInterval(() => this.pollF1(), 6 * 3600e3); }
 
     // clock
     this._timeTimer = setInterval(() => {
@@ -63,6 +66,10 @@ Module.register("MMM-OpenSky-Header", {
     // Sports game-day pill (only on the day of a game, gone at midnight)
     const g = this.gameToday();
     if (g) row.appendChild(this._gamePill(g));
+
+    // Formula 1: the next race and how many days until it
+    const race = this.nextRace(this.now || new Date());
+    if (race) row.appendChild(this._f1Pill(race, this.now || new Date()));
 
     // Top-right: quiet countdown to the next big holiday or family birthday
     const next = this._nextOccasion(this.now || new Date());
@@ -334,7 +341,13 @@ Module.register("MMM-OpenSky-Header", {
   },
 
   socketNotificationReceived(n, p) {
+    if (n === "F1_RESULT") {
+      if (p && p.ok && Array.isArray(p.races)) { this.f1 = p.races; this.updateDom(0); }
+      else { Log.warn(`${this.name}: F1 calendar: ${p && p.error} — retrying in 30 minutes`); this._f1Retry = setTimeout(() => this.pollF1(), 30 * 60 * 1000); }
+      return;
+    }
     if (n === "WEATHER_RESULT") {
+
       clearTimeout(this._wxRetry);
       if (!p || !p.ok) {
         // network hiccup: try again in a minute instead of waiting for the next regular refresh
@@ -415,7 +428,36 @@ Module.register("MMM-OpenSky-Header", {
     return null;
   },
 
+  /* ---------- Formula 1 pill ----------
+   * The next race (from MMM-OpenSky-Header's node helper → lib/f1.js) with a countdown in days; on race day its start
+   * time. A race counts as "next" until 3 hours after its start. */
+  pollF1() {
+    clearTimeout(this._f1Retry);
+    this.sendSocketNotification("F1_FETCH");
+  },
+
+  nextRace(now) {
+    if (!this.config.f1 || !Array.isArray(this.f1)) return null;
+    return this.f1.filter((r) => r.start > now.getTime() - 3 * 3600e3).sort((a, b) => a.start - b.start)[0] || null;
+  },
+
+  _f1Pill(race, now) {
+    const start = new Date(race.start);
+    const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const days = Math.round((day(start) - day(now)) / 86400e3);
+    const time = start.toLocaleTimeString(config.locale || "en-US", { hour: "numeric", minute: "2-digit", hour12: this.config.time.format12 });
+    const when = days <= 0 ? osT("today {time}", { time }) : days === 1 ? osT("tomorrow") : osT("{n} days", { n: days });
+    const el = document.createElement("div");
+    el.className = "hb-f1" + (days <= 0 ? " hb-f1-today" : "");
+    el.innerHTML = `<span class="hb-f1-flag"><svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M5 4h3.5v3H5zM12 4h3.5v3H12zM8.5 7H12v3H8.5zM15.5 7H19v3h-3.5zM5 10h3.5v3H5zM12 10h3.5v3H12z" class="f"/></svg></span>`
+      + `<span class="hb-f1-tag">F1</span><span class="hb-f1-name"></span><span class="hb-f1-when"></span>`;
+    el.querySelector(".hb-f1-name").textContent = race.name;
+    el.querySelector(".hb-f1-when").textContent = when;
+    return el;
+  },
+
   _gamePill(g) {
+
     const el = document.createElement("div");
     el.className = `hb-game hb-game-${g.state}`;
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[x]));

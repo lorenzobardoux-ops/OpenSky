@@ -98,6 +98,25 @@
   font-size:20px; font-weight:800; white-space:nowrap;
 }
 .hb-game + .hb-countdown{ margin-left:0; }
+
+/* Formula 1: the next race + countdown (left of the countdown, right of a game pill) */
+.hb-f1{
+  margin-left:auto;
+  display:inline-flex; align-items:center; gap:8px; min-width:0;
+  height:46px; padding:0 16px 0 10px; border-radius:999px;
+  background:#f4f4f5; color:#18181b;
+  font-size:20px; font-weight:800; white-space:nowrap;
+}
+.hb-game + .hb-f1, .hb-f1 + .hb-countdown{ margin-left:0; }
+.hb-f1-flag{ display:inline-flex; width:28px; height:28px; }
+.hb-f1-flag svg{ width:100%; height:100%; fill:none; stroke:#18181b; stroke-width:1.6; stroke-linejoin:round; }
+.hb-f1-flag svg .f{ fill:#18181b; stroke:none; }
+.hb-f1-tag{ padding:2px 7px; border-radius:6px; background:#e10600; color:#fff; font-size:15px; font-weight:900; letter-spacing:.5px; }
+.hb-f1-name{ overflow:hidden; text-overflow:ellipsis; max-width:420px; }
+.hb-f1-when{ color:#52525b; font-weight:700; font-size:18px; }
+.hb-f1-when::before{ content:"·"; margin-right:8px; color:#c3cad6; }
+.hb-f1-today{ background:#fdecec; }
+.hb-f1-today .hb-f1-when{ color:#b91c1c; }
 .hb-game-logo{ width:30px; height:30px; object-fit:contain; display:block; }
 .hb-game-vs{ font-size:15px; font-weight:800; color:#6b7280; }
 .hb-game-team{ color:#1f2937; }

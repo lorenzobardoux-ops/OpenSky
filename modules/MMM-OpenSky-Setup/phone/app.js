@@ -568,6 +568,9 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
       el("div", { class: "two" },
         field(osT("Sports league"), select([["nfl", "NFL"], ["college-football", osT("College football")], ["nba", "NBA"], ["wnba", "WNBA"], ["mens-college-basketball", osT("College basketball")], ["mlb", "MLB"], ["nhl", "NHL"], ["mls", "MLS"], ["nwsl", "NWSL"], ["epl", osT("Premier League")]], hd.sports.league || "nfl", (v) => { hd.sports.league = v; change(); })),
         field(osT("Team code"), text(hd.sports.team, (v) => { hd.sports.team = v.trim().toUpperCase(); change(); }, { placeholder: osT("e.g. NE"), maxlength: "5", autocapitalize: "characters" }), osT("Game-day pill. Empty = off."))),
+      el("div", { class: "line" }, el("span", {}, el("b", {}, osT("Formula 1")), el("small", {}, osT("The next race and the days until it, at the top of the screen"))),
+        toggle(hd.f1 === true, (v) => { if (v) hd.f1 = true; else delete hd.f1; change(); }, osT("Formula 1"))),
+
       field(osT("Word game"), seg([["nyt", osT("NYT's daily word")], ["opensky", osT("OpenSky's words")]], wg.source === "opensky" ? "opensky" : "nyt", (v) => { wg.source = v; change(); })),
       ...musicFields(),
       field(osT("Weather from"), seg([["open-meteo", osT("Open-Meteo (free)")], ["openweathermap", "OpenWeatherMap"]], w.provider || "open-meteo", (v) => { w.provider = v; change(); drawWeather(v); })),

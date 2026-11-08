@@ -3,6 +3,7 @@
  *   (OpenWeatherMap's key comes from secrets.json, never from the page)
  * - GAME_FETCH {league, team, ymd} → GAME_RESULT {ok, event|null}: ESPN's public scoreboard. ESPN refuses requests
  *   from the page itself (browser origin) but not from the server.
+ * - F1_FETCH → F1_RESULT {ok, races} | {ok:false, error}: the Formula 1 calendar (lib/f1.js; asked on Mondays, kept on disk)
  */
 const NodeHelper = require("node_helper");
 const path = require("path");
@@ -11,6 +12,7 @@ const path = require("path");
 const lib = (f) => require(path.join(global.root_path, "modules", "opensky-lib", f));
 const { fetchWeather } = lib("weather.js");
 const { secret } = lib("secrets.js");
+const f1 = lib("f1.js");
 
 // OpenSky league name → ESPN "sport/league" path
 const LEAGUES = {
@@ -21,6 +23,12 @@ const LEAGUES = {
 
 module.exports = NodeHelper.create({
   async socketNotificationReceived(n, p) {
+    if (n === "F1_FETCH") {
+      try { this.sendSocketNotification("F1_RESULT", { ok: true, races: await f1.races() }); }
+      catch (e) { this.sendSocketNotification("F1_RESULT", { ok: false, error: e.message }); }
+      return;
+    }
+
     if (n === "WEATHER_FETCH") {
       try {
         const w = await fetchWeather({ ...p, apiKey: secret("weather.openweathermap.apiKey") });
