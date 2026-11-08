@@ -257,7 +257,9 @@ A small trash-can icon appears on pickup days in the week view. It moves a day l
 ```
 A keyboard slides up whenever you tap a text box (adding a list item, naming an event). Turn it off with `false`
 if you use a real keyboard. Dates and times use pickers instead. `"layout": "de"` gives the German keyboard
-(QWERTZ with ä, ö, ü, ß), the default when `locale.language` is `"de"`; `"en"` the English one.
+(QWERTZ with ä, ö, ü, ß), the default when `locale.language` is `"de"`; `"en"` the English one. The Timer's hours,
+minutes and seconds get a number pad instead (digits and delete only).
+
 
 
 ## The Settings panel (on the screen)

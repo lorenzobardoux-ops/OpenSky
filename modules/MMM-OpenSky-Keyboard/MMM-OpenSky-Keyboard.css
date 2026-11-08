@@ -58,3 +58,11 @@ body.kb-open .calendar-editor-overlay {
 }
 body.kb-open .ost-panel { max-height: calc(54 * var(--vh)); }
 body.kb-open .calendar-editor-modal { max-height: calc(calc(100 * var(--vh)) - calc(40 * var(--vh)) - calc(6 * var(--vh))); }
+
+/* Number pad (data-okb="digits", e.g. the Timer): 1–9, 0 and delete, like a phone's */
+.okb-pad .okb-rows { max-width: 560px; }
+.okb-pad .okb-row:nth-child(2) { padding: 0; }
+.okb-pad .okb-key { max-width: none; font-size: clamp(24px, calc(3.6 * var(--vh)), 36px); }
+.okb-pad .okb-back { flex: 1 1 0; max-width: none; }
+.okb-pad .okb-gap { visibility: hidden; box-shadow: none; }
+

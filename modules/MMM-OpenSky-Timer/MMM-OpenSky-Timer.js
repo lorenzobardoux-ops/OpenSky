@@ -310,14 +310,25 @@ Module.register("MMM-OpenSky-Timer", {
     const container = document.createElement("div");
     container.className = "timer-number-input";
 
+    // a text box (not type="number"): the on-screen keyboard opens its number pad for it (data-okb="digits"),
+    // and the first digit typed replaces the "00" (everything is selected on focus)
     const input = document.createElement("input");
-    input.type = "number";
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.dataset.okb = "digits";
+    input.maxLength = 2;
+    input.autocomplete = "off";
     input.id = `timer-${id}`;
-    input.min = min;
-    input.max = max;
     input.value = "00";
     input.className = "timer-input-field";
-    input.onfocus = () => { this.lastInputFocus = Date.now(); };
+    input.onfocus = () => { this.lastInputFocus = Date.now(); setTimeout(() => { try { input.select(); } catch (e) { /* gone */ } }, 0); };
+    input.oninput = () => { const d = input.value.replace(/\D/g, ""); if (d !== input.value) input.value = d; };
+    // leaving the box: a number between min and max, always two digits
+    input.onblur = () => {
+      const n = Math.min(max, Math.max(min, parseInt(input.value, 10) || 0));
+      input.value = String(n).padStart(2, "0");
+    };
+
     // Return on the on-screen keyboard starts the timer
     input.onkeydown = (e) => {
       if (e.key === "Enter") document.querySelector(".timer-start-btn")?.click();

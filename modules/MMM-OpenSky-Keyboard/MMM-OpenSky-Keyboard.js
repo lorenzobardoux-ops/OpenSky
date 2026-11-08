@@ -23,6 +23,8 @@ Module.register("MMM-OpenSky-Keyboard", {
       numbers: [["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"], ["-", "/", ":", ";", "(", ")", "€", "&", "@", "\""], ["#", "%", "+", "=", "?", "!", "'", "*", "{back}"], ["{letters}", ",", "{space}", ".", "{enter}"]]
     }
   },
+  // Number pad: only digits and delete, for boxes marked data-okb="digits" (the Timer's hours / minutes / seconds)
+  DIGITS: [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["{gap}", "0", "{back}"]],
   // (ß has no capital on a keyboard: "ß".toUpperCase() would be "SS")
   upper(k) { return k === "ß" ? k : k.toUpperCase(); },
 
@@ -80,13 +82,15 @@ Module.register("MMM-OpenSky-Keyboard", {
   },
 
   draw() {
-    const rows = (this.LAYOUTS[this.config.layout] || this.LAYOUTS.en)[this.layer];
+    const rows = this.layer === "digits" ? this.DIGITS : (this.LAYOUTS[this.config.layout] || this.LAYOUTS.en)[this.layer];
+    this.root.classList.toggle("okb-pad", this.layer === "digits");
     const label = {
       "{shift}": `<svg viewBox="0 0 24 24"><path d="M12 4l8 8h-4.5v8h-7v-8H4z"/></svg>`,
       "{back}": `<svg viewBox="0 0 24 24"><path d="M9 5h11a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H9l-6.5-7z"/><path d="M12 9.5l5 5M17 9.5l-5 5"/></svg>`,
       "{numbers}": "123", "{letters}": "ABC", "{space}": osT("space"), "{enter}": osT("return")
     };
     this.root.innerHTML = `<div class="okb-rows">${rows.map((row) => `<div class="okb-row">${row.map((k) => {
+      if (k === "{gap}") return `<span class="okb-key okb-gap"></span>`;
       const special = k.startsWith("{");
       const text = special ? label[k] : (this.shift && this.layer === "letters" ? this.upper(k) : k);
       const cls = special ? ` okb-${k.slice(1, -1)}` : "";
@@ -143,7 +147,9 @@ Module.register("MMM-OpenSky-Keyboard", {
   showKeyboard(el) {
     this.build();
     this.target = el && el.tagName ? el : (this.typeable(document.activeElement) ? document.activeElement : this.target);
-    this.layer = this.target && /^(tel|number)$/i.test(this.target.getAttribute("type") || "") ? "numbers" : "letters";
+    this.layer = this.target && this.target.dataset.okb === "digits" ? "digits"
+      : this.target && /^(tel|number)$/i.test(this.target.getAttribute("type") || "") ? "numbers" : "letters";
+
     // an empty box starts with a capital letter (like a phone); data-okb-caps="off" turns that off
     this.shift = !!(this.target && !this.target.value && this.layer === "letters" && this.target.dataset.okbCaps !== "off");
     this.draw();

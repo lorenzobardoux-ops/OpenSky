@@ -120,6 +120,9 @@ Module.register("MMM-OpenSky-Settings", {
       let pressedOutside = false;
       this.panel.addEventListener("pointerdown", (e) => { pressedOutside = e.target === this.panel; });
       this.panel.addEventListener("click", (e) => { if (e.target === this.panel && pressedOutside) this.close(); });
+      // a finger drag scrolls the panel (also on touchscreens that act like a mouse)
+      window.OpenSkyDragScroll(this.panel, ".ost-body");
+
       document.body.appendChild(this.panel);
     }
     this.confirming = null;
