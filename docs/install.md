@@ -66,6 +66,18 @@ This gets the newest OpenSky, re-runs the installer (no questions) and restarts.
 properly, it goes back to the previous one by itself. To go back by hand: `opensky rollback`. (Settings → Update does
 the same from the screen.) Your settings and data in `~/OpenSky/config/` are kept.
 
+### Your own version (a fork)
+If you keep your own changes on a branch of your GitHub fork, let the Pi follow that branch instead (once):
+```bash
+cd ~/OpenSky && git remote set-url origin https://github.com/YOU/OpenSky.git
+git fetch origin && git checkout -B my-branch --track origin/my-branch
+opensky pull-hook on
+```
+From then on `cd ~/OpenSky && git pull` is all it takes: OpenSky restarts with the new files by itself, and re-runs
+the installer first when the pull changed something it sets up (a new module, the services, `install.sh`).
+`opensky update` and Settings → Update leave a branch like this alone (they'd switch it to the official release).
+`opensky pull-hook off` turns the automatic restart off again.
+
 ## Uninstalling
 ```bash
 cd ~/OpenSky && ./install.sh --uninstall

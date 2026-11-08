@@ -28,6 +28,14 @@ target() {
 
 update() {
   cd "$REPO" || exit 1
+  # a Pi that follows its own branch (a fork with changes) gets them with `git pull`; an update would leave that branch
+  local branch; branch=$(git symbolic-ref -q --short HEAD)
+  if [ -n "$branch" ] && [ "$branch" != main ]; then
+    echo "This OpenSky follows its own branch \"$branch\", so 'opensky update' won't switch it to the official version."
+    echo "Get the newest from that branch with:  cd $REPO && git pull"
+    [ -f "$REPO/.git/hooks/post-merge" ] || echo "(then 'opensky restart' — or once: 'opensky pull-hook on', and git pull restarts by itself)"
+    exit 1
+  fi
   if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
     echo "OpenSky's files were changed by hand here, so it won't update over them:"; git status --short --untracked-files=no
     echo "(Your settings in config/ are fine — they're not part of this check.)"; exit 1
@@ -83,6 +91,17 @@ case "${1:-help}" in
              else echo "– $f is missing (run ./install.sh)"; fi
            done ;;
   update)  update ;;
+  pull-hook) # for a Pi that follows its own branch: after `git pull`, OpenSky sets itself up and restarts by itself
+           hook="$REPO/.git/hooks/post-merge"
+           case "${2:-status}" in
+             on)  [ -d "$REPO/.git/hooks" ] || { echo "$REPO isn't a git folder."; exit 1; }
+                  [ -f "$hook" ] && ! grep -q "opensky pull-hook" "$hook" && { echo "There's already a post-merge hook in $hook — not replacing it."; exit 1; }
+                  printf '#!/bin/sh\n# added by: opensky pull-hook on   (remove with: opensky pull-hook off)\nexec "$(git rev-parse --show-toplevel)/tools/after-pull.sh"\n' > "$hook"
+                  chmod +x "$hook"; echo "On: after 'git pull' in $REPO, OpenSky restarts with the new files by itself." ;;
+             off) if [ -f "$hook" ] && grep -q "opensky pull-hook" "$hook"; then rm -f "$hook"; echo "Off: after 'git pull', run 'opensky restart' yourself."
+                  else echo "It was off already."; fi ;;
+             *)   if [ -f "$hook" ] && grep -q "opensky pull-hook" "$hook"; then echo "On (git pull restarts OpenSky by itself)"; else echo "Off"; fi ;;
+           esac ;;
   rollback) rollback ;;
   backup)  # a backup now, to the place chosen in Settings / phone setup (opensky.json → backup)
            export OPENSKY_SETTINGS="$CONFIG/opensky.json" OPENSKY_SECRETS="$CONFIG/secrets.json" \
@@ -113,6 +132,7 @@ opensky — your family screen
   opensky check        check the settings files for typos
   opensky update       get the newest OpenSky and restart (goes back by itself if it doesn't start)
   opensky rollback     go back to the version before the last update
+  opensky pull-hook on|off   own branch (a fork)? after 'git pull' OpenSky sets itself up and restarts by itself
   opensky backup       make a backup now (to the place chosen in Settings)
   opensky addon music  add-on: this screen becomes an AirPlay + Spotify speaker (a Music page)
 Settings + data: $CONFIG

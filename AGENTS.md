@@ -27,7 +27,8 @@ MagicMirror². This file is the entry point; read it first, then the docs it poi
 | The user's settings + data (back this up) | `~/OpenSky/config/`: `opensky.json`, `secrets.json` (chmod 600), `device.json` (Settings panel), `local-calendar.json`, `lists.json`, `calendar-cache/` |
 | Runtime (re-creatable by `./install.sh`) | `~/.local/share/opensky/`: `MagicMirror/` (pinned tag, OpenSky linked in by `tools/link-mm.sh`), `node/` (only if the system Node is too old), `venv/` |
 | Services | systemd **user** units `opensky.service` (Electron) + `opensky-calendar.service` (CalDAV helper); started by `~/.config/autostart/opensky.desktop` |
-| Commands | `opensky status · logs · check · restart · edit · secrets · update` (`tools/opensky`) |
+| Commands | `opensky status · logs · check · restart · edit · secrets · update · pull-hook on\|off` (`tools/opensky`) |
+| A Pi on its own branch (a fork) | `git pull` instead of `opensky update` (which refuses there); `opensky pull-hook on` makes git's post-merge hook run `tools/after-pull.sh` (install.sh when needed, then restart) — see `docs/install.md` |
 
 The settings files are found through environment variables set by the services (`OPENSKY_SETTINGS`, `OPENSKY_SECRETS`,
 `OPENSKY_LOCAL_CALENDAR`, `OPENSKY_LOCAL_LISTS`, `OPENSKY_CALENDAR_CACHE`), so nothing personal lives in the runtime.

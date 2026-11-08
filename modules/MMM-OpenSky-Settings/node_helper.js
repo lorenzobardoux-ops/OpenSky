@@ -396,7 +396,11 @@ module.exports = NodeHelper.create({
     out.ip = ip.out.trim().split(/\s+/)[0] || "";
     const v = await run("git", ["-C", REPO, "describe", "--tags", "--always", "--dirty"], 5000);
     out.version = v.ok ? v.out.trim() : null;
-    if (out.internet && !DRY) {
+    // a Pi on its own branch (a fork) gets changes with `git pull`, and `opensky update` leaves it alone: no count
+    const branch = (await run("git", ["-C", REPO, "symbolic-ref", "-q", "--short", "HEAD"], 5000)).out.trim();
+    const ownBranch = branch !== "" && branch !== "main";
+    if (ownBranch) out.updates = 0;
+    if (out.internet && !DRY && !ownBranch) {
       // how many updates are waiting (only fetches; nothing changes until "Update" is pressed)
       // the same rule as `opensky update`: the newest release tag, or origin/main when update.channel is "main"
       if ((await run("git", ["-C", REPO, "fetch", "--quiet", "--tags", "origin"], 30000)).ok) {
