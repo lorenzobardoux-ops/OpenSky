@@ -429,8 +429,10 @@ Module.register("MMM-OpenSky-Header", {
   },
 
   /* ---------- Formula 1 pill ----------
-   * The next race (from MMM-OpenSky-Header's node helper → lib/f1.js) with a countdown in days; on race day its start
-   * time. A race counts as "next" until 3 hours after its start. */
+   * The next race weekend (from MMM-OpenSky-Header's node helper → lib/f1.js): its name, when qualifying and the race
+   * start, and a countdown in days to the next of the two. A session drops off 30 minutes after its start (qualifying
+   * first, then the race; then it's the next weekend's turn). */
+  F1_AFTER: 30 * 60 * 1000,
   pollF1() {
     clearTimeout(this._f1Retry);
     this.sendSocketNotification("F1_FETCH");
@@ -438,23 +440,45 @@ Module.register("MMM-OpenSky-Header", {
 
   nextRace(now) {
     if (!this.config.f1 || !Array.isArray(this.f1)) return null;
-    return this.f1.filter((r) => r.start > now.getTime() - 3 * 3600e3).sort((a, b) => a.start - b.start)[0] || null;
+    return this.f1.filter((r) => r.start > now.getTime() - this.F1_AFTER).sort((a, b) => a.start - b.start)[0] || null;
+  },
+
+  // the sessions still to show: qualifying (until 30 min after its start), then the race
+  f1Sessions(race, now) {
+    return [[osT("Quali"), race.quali], [osT("Race"), race.start]]
+      .filter(([, t]) => Number.isFinite(t) && t > now.getTime() - this.F1_AFTER)
+      .map(([label, t]) => ({ label, start: t }));
   },
 
   _f1Pill(race, now) {
-    const start = new Date(race.start);
+    const loc = config.locale || "en-US", h12 = this.config.time.format12;
     const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    const days = Math.round((day(start) - day(now)) / 86400e3);
-    const time = start.toLocaleTimeString(config.locale || "en-US", { hour: "numeric", minute: "2-digit", hour12: this.config.time.format12 });
-    const when = days <= 0 ? osT("today {time}", { time }) : days === 1 ? osT("tomorrow") : osT("{n} days", { n: days });
+    const daysTo = (t) => Math.round((day(new Date(t)) - day(now)) / 86400e3);
+    const time = (t) => new Date(t).toLocaleTimeString(loc, { hour: h12 ? "numeric" : "2-digit", minute: "2-digit", hour12: h12 });   // 05:00 / 5:00 AM
+
+    // "today 14:00", "tomorrow 14:00", "Sat 14:00" this week, "Sat 21.11. 14:00" further off
+    const at = (t) => {
+      const n = daysTo(t), d = new Date(t);
+      if (n <= 0) return osT("today {time}", { time: time(t) });
+      if (n === 1) return osT("tomorrow {time}", { time: time(t) });
+      const wd = d.toLocaleDateString(loc, { weekday: "short" });
+      return n < 7 ? `${wd} ${time(t)}` : `${wd} ${d.toLocaleDateString(loc, { day: "numeric", month: "numeric" })} ${time(t)}`;
+    };
+    const sessions = this.f1Sessions(race, now);
+    const first = sessions[0] || { start: race.start };
+    const n = daysTo(first.start);
     const el = document.createElement("div");
-    el.className = "hb-f1" + (days <= 0 ? " hb-f1-today" : "");
+    el.className = "hb-f1" + (n <= 0 ? " hb-f1-today" : "");
     el.innerHTML = `<span class="hb-f1-flag"><svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M5 4h3.5v3H5zM12 4h3.5v3H12zM8.5 7H12v3H8.5zM15.5 7H19v3h-3.5zM5 10h3.5v3H5zM12 10h3.5v3H12z" class="f"/></svg></span>`
-      + `<span class="hb-f1-tag">F1</span><span class="hb-f1-name"></span><span class="hb-f1-when"></span>`;
+      + `<span class="hb-f1-tag">F1</span><span class="hb-f1-name"></span>`
+      + sessions.map((s, i) => `<span class="hb-f1-session${i === 0 ? " next" : ""}"><b></b><span></span></span>`).join("")
+      + (n > 1 ? `<span class="hb-f1-when"></span>` : "");
     el.querySelector(".hb-f1-name").textContent = race.name;
-    el.querySelector(".hb-f1-when").textContent = when;
+    el.querySelectorAll(".hb-f1-session").forEach((x, i) => { x.querySelector("b").textContent = sessions[i].label; x.querySelector("span").textContent = at(sessions[i].start); });
+    if (n > 1) el.querySelector(".hb-f1-when").textContent = osT("{n} days", { n });
     return el;
   },
+
 
   _gamePill(g) {
 

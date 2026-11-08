@@ -112,11 +112,15 @@
 .hb-f1-flag svg{ width:100%; height:100%; fill:none; stroke:#18181b; stroke-width:1.6; stroke-linejoin:round; }
 .hb-f1-flag svg .f{ fill:#18181b; stroke:none; }
 .hb-f1-tag{ padding:2px 7px; border-radius:6px; background:#e10600; color:#fff; font-size:15px; font-weight:900; letter-spacing:.5px; }
-.hb-f1-name{ overflow:hidden; text-overflow:ellipsis; max-width:420px; }
+.hb-f1-name{ overflow:hidden; text-overflow:ellipsis; max-width:340px; }
 .hb-f1-when{ color:#52525b; font-weight:700; font-size:18px; }
-.hb-f1-when::before{ content:"·"; margin-right:8px; color:#c3cad6; }
+.hb-f1-when::before, .hb-f1-session::before{ content:"·"; margin-right:8px; color:#c3cad6; }
+/* qualifying / race: the label small, its start time; the next one darker */
+.hb-f1-session{ display:inline-flex; align-items:baseline; gap:6px; color:#71717a; font-weight:700; font-size:18px; }
+.hb-f1-session b{ font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; }
+.hb-f1-session.next{ color:#18181b; }
 .hb-f1-today{ background:#fdecec; }
-.hb-f1-today .hb-f1-when{ color:#b91c1c; }
+.hb-f1-today .hb-f1-session.next{ color:#b91c1c; }
 .hb-game-logo{ width:30px; height:30px; object-fit:contain; display:block; }
 .hb-game-vs{ font-size:15px; font-weight:800; color:#6b7280; }
 .hb-game-team{ color:#1f2937; }
