@@ -429,9 +429,9 @@ Module.register("MMM-OpenSky-Header", {
   },
 
   /* ---------- Formula 1 pill ----------
-   * The next race weekend (from MMM-OpenSky-Header's node helper → lib/f1.js): its name, when qualifying and the race
-   * start, and a countdown in days to the next of the two. A session drops off 30 minutes after its start (qualifying
-   * first, then the race; then it's the next weekend's turn). */
+   * The next race weekend (from MMM-OpenSky-Header's node helper → lib/f1.js): its name, its next session (sprint
+   * qualifying, sprint, qualifying or the race) with its start, and a countdown in days. 30 minutes after a session's
+   * start the pill moves on to the one after it; 30 minutes after the race's start, to the next weekend. */
   F1_AFTER: 30 * 60 * 1000,
   pollF1() {
     clearTimeout(this._f1Retry);
@@ -443,11 +443,12 @@ Module.register("MMM-OpenSky-Header", {
     return this.f1.filter((r) => r.start > now.getTime() - this.F1_AFTER).sort((a, b) => a.start - b.start)[0] || null;
   },
 
-  // the sessions still to show: qualifying (until 30 min after its start), then the race
-  f1Sessions(race, now) {
-    return [[osT("Quali"), race.quali], [osT("Race"), race.start]]
+  // the weekend's next session (until 30 min after its start); a weekend without sprint has none of those
+  f1Next(race, now) {
+    return [[osT("Sprint quali"), race.sprintQuali], [osT("Sprint"), race.sprint], [osT("Quali"), race.quali], [osT("Race"), race.start]]
       .filter(([, t]) => Number.isFinite(t) && t > now.getTime() - this.F1_AFTER)
-      .map(([label, t]) => ({ label, start: t }));
+      .sort((a, b) => a[1] - b[1])
+      .map(([label, start]) => ({ label, start }))[0] || { label: osT("Race"), start: race.start };
   },
 
   _f1Pill(race, now) {
@@ -464,17 +465,18 @@ Module.register("MMM-OpenSky-Header", {
       const wd = d.toLocaleDateString(loc, { weekday: "short" });
       return n < 7 ? `${wd} ${time(t)}` : `${wd} ${d.toLocaleDateString(loc, { day: "numeric", month: "numeric" })} ${time(t)}`;
     };
-    const sessions = this.f1Sessions(race, now);
-    const first = sessions[0] || { start: race.start };
-    const n = daysTo(first.start);
+    const next = this.f1Next(race, now);
+    const n = daysTo(next.start);
     const el = document.createElement("div");
     el.className = "hb-f1" + (n <= 0 ? " hb-f1-today" : "");
     el.innerHTML = `<span class="hb-f1-flag"><svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M5 4h3.5v3H5zM12 4h3.5v3H12zM8.5 7H12v3H8.5zM15.5 7H19v3h-3.5zM5 10h3.5v3H5zM12 10h3.5v3H12z" class="f"/></svg></span>`
       + `<span class="hb-f1-tag">F1</span><span class="hb-f1-name"></span>`
-      + sessions.map((s, i) => `<span class="hb-f1-session${i === 0 ? " next" : ""}"><b></b><span></span></span>`).join("")
+      + `<span class="hb-f1-session next"><b></b><span></span></span>`
       + (n > 1 ? `<span class="hb-f1-when"></span>` : "");
     el.querySelector(".hb-f1-name").textContent = race.name;
-    el.querySelectorAll(".hb-f1-session").forEach((x, i) => { x.querySelector("b").textContent = sessions[i].label; x.querySelector("span").textContent = at(sessions[i].start); });
+    el.querySelector(".hb-f1-session b").textContent = next.label;
+    el.querySelector(".hb-f1-session span").textContent = at(next.start);
+
     if (n > 1) el.querySelector(".hb-f1-when").textContent = osT("{n} days", { n });
     return el;
   },

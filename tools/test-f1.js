@@ -9,7 +9,7 @@ const ok = (n, c, i) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL
 const SEASONS = {
   2026: [
     { round: "1", raceName: "Australian Grand Prix", date: "2026-03-08", time: "04:00:00Z", Circuit: { Location: { locality: "Melbourne" } } },
-    { round: "2", raceName: "British Grand Prix", date: "2026-07-05", time: "14:00:00Z", Qualifying: { date: "2026-07-04", time: "14:00:00Z" }, Circuit: { Location: { locality: "Silverstone" } } },
+    { round: "2", raceName: "British Grand Prix", date: "2026-07-05", time: "14:00:00Z", Qualifying: { date: "2026-07-04", time: "15:00:00Z" }, Sprint: { date: "2026-07-04", time: "11:00:00Z" }, SprintQualifying: { date: "2026-07-03", time: "15:30:00Z" }, Circuit: { Location: { locality: "Silverstone" } } },
     { round: "3", raceName: "United States Grand Prix", date: "2026-10-25", Circuit: { Location: { locality: "Austin" } } }
   ],
   2027: [{ round: "1", raceName: "Bahrain Grand Prix", date: "2027-03-07", time: "15:00:00Z", Circuit: { Location: { locality: "Sakhir" } } }]
@@ -35,7 +35,8 @@ const server = http.createServer((req, res) => {
   // Wednesday 2026-07-01
   let r = await f1.races(at("2026-07-01T10:00:00"));
   ok("1 the season's races, in order, with a start time (none given → noon UTC)", r.length === 3 && r[1].name === "British Grand Prix" && r[1].start === Date.parse("2026-07-05T14:00:00Z") && r[2].start === Date.parse("2026-10-25T12:00:00Z") && asked.join() === "2026", { asked, r: r.map((x) => x.name) });
-  ok("1b qualifying's start too (none in the calendar → null)", r[1].quali === Date.parse("2026-07-04T14:00:00Z") && r[0].quali === null, r.map((x) => x.quali));
+  ok("1b qualifying's and the sprint's starts too (none in the calendar → null)", r[1].quali === Date.parse("2026-07-04T15:00:00Z") && r[1].sprint === Date.parse("2026-07-04T11:00:00Z") && r[1].sprintQuali === Date.parse("2026-07-03T15:30:00Z") && r[0].quali === null && r[0].sprint === null, r.map((x) => [x.quali, x.sprint, x.sprintQuali]));
+
 
   asked = [];
   await f1.races(at("2026-07-04T10:00:00"));   // Saturday, same week

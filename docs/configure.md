@@ -134,9 +134,11 @@ pick an icon, optionally lock it with a PIN, then **Restart now**. Edit or remov
 - `sports`: on game day, a pill shows your team's game, time and channel, then the live score.
   - Leagues: `nfl`, `college-football`, `nba`, `wnba`, `mens-college-basketball`, `mlb`, `nhl`, `mls`, `nwsl`, `epl`.
   - `team` is the short code shown on scoreboards (`NE`, `BOS`, `LAL`…). Leave it `""` for no sports pill.
-- `f1: true`: a pill with the next Formula 1 weekend: the race's name, when qualifying and the race start
-  ("Quali Sa 21.11. 05:00 · Race So 22.11. 05:00", "today" / "tomorrow" close to it) and the days until the next of
-  the two. Each drops off 30 minutes after its start (qualifying first, then the race; then the next weekend shows).
+- `f1: true`: a pill with the next Formula 1 weekend: the race's name, its next session — sprint qualifying, sprint,
+  qualifying or the race — with its start ("Quali Sa 21.11. 05:00", "today" / "tomorrow" close to it) and the days
+  until it. 30 minutes after a session's start it moves on to the next one; 30 minutes after the race's start to
+  the next weekend.
+
   Phone page: Extras → Formula 1. The calendar comes from Jolpica
 
   (api.jolpi.ca, free, no key), asked on Mondays and kept in `config/calendar-cache/`, so it works offline too.
