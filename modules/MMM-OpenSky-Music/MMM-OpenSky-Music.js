@@ -14,7 +14,7 @@ Module.register("MMM-OpenSky-Music", {
   },
 
   getStyles() { return ["MMM-OpenSky-Music.css"]; },
-  getScripts() { return ["modules/opensky-lib/client/opensky-client.js"]; },
+  getScripts() { return ["modules/opensky-lib/client/i18n.js", "modules/opensky-lib/client/opensky-client.js"]; },
 
   start() {
     this.now = null;          // what plays on this screen
@@ -74,7 +74,7 @@ Module.register("MMM-OpenSky-Music", {
     let id = ids.includes(this.selected) ? this.selected : null;
     if (!id) id = ids.find((i) => nowOf(i) && nowOf(i).playing) || (ids.includes(this.shownId) && nowOf(this.shownId) ? this.shownId : null) || ids.find((i) => nowOf(i)) || ids[0];
     this.shownId = id;
-    if (id === "screen") return { id, name: "This screen", screen: true, now: this.now };
+    if (id === "screen") return { id, name: osT("This screen"), screen: true, now: this.now };
     const sp = this.speakers.find((s) => s.id === id);
     return { id, name: sp.name, screen: false, now: sp.now, available: sp.available, volume: sp.volume, error: sp.error };
   },
@@ -109,7 +109,7 @@ Module.register("MMM-OpenSky-Music", {
       b.onclick = () => { this.selected = id; this.updateDom(); };
       return b;
     };
-    if (this.hasScreen()) bar.append(tab("screen", "This screen", this.now && this.now.playing));
+    if (this.hasScreen()) bar.append(tab("screen", osT("This screen"), this.now && this.now.playing));
     this.speakers.forEach((s) => bar.append(tab(s.id, s.name, s.now && s.now.playing, !s.available)));
     return bar;
   },
@@ -117,8 +117,8 @@ Module.register("MMM-OpenSky-Music", {
   speakerIdle(v) {
     const card = this.el("div", "mu-card mu-idle");
     card.append(this.html("div", "mu-idle-ic", window.OpenSkyIcons ? window.OpenSkyIcons.svg("music") : ""),
-      this.el("h2", "mu-idle-title", v.available === false ? `${v.name} isn't reachable` : `Nothing playing on ${v.name}`),
-      this.el("p", "mu-idle-sub", v.available === false ? (v.error || "Is it switched on? Check it in Home Assistant.") : "Start some music in its app (Spotify, Apple Music, Sonos…), then control it here."));
+      this.el("h2", "mu-idle-title", v.available === false ? osT("{name} isn't reachable", { name: v.name }) : osT("Nothing playing on {name}", { name: v.name })),
+      this.el("p", "mu-idle-sub", v.available === false ? (v.error || osT("Is it switched on? Check it in Home Assistant.")) : osT("Start some music in its app (Spotify, Apple Music, Sonos…), then control it here.")));
     if (v.available !== false) card.append(this.volumeRow());
     return card;
   },
@@ -153,7 +153,7 @@ Module.register("MMM-OpenSky-Music", {
     info.append(prog);
     const ctl = this.el("div", "mu-controls");
     const btn = (cls, icon, action, label) => { const b = this.html("button", `mu-btn ${cls}`, icon); b.setAttribute("aria-label", label); b.onclick = () => this.control(action); return b; };
-    ctl.append(btn("mu-prev", this.ICON.prev, "previous", "Previous"), btn("mu-play", now.playing ? this.ICON.pause : this.ICON.play, "playpause", now.playing ? "Pause" : "Play"), btn("mu-next", this.ICON.next, "next", "Next"));
+    ctl.append(btn("mu-prev", this.ICON.prev, "previous", osT("Previous")), btn("mu-play", now.playing ? this.ICON.pause : this.ICON.play, "playpause", now.playing ? osT("Pause") : osT("Play")), btn("mu-next", this.ICON.next, "next", osT("Next")));
     info.append(ctl, this.volumeRow());
     card.append(box, info);
     this.syncPlaying(card);
@@ -164,8 +164,8 @@ Module.register("MMM-OpenSky-Music", {
     const card = this.el("div", "mu-card mu-idle");
     const name = this.config.name;
     card.append(this.html("div", "mu-idle-ic", window.OpenSkyIcons ? window.OpenSkyIcons.svg("music") : ""),
-      this.el("h2", "mu-idle-title", "Play music on this screen"),
-      this.el("p", "mu-idle-sub", `On your phone, pick “${name}” as the speaker.`));
+      this.el("h2", "mu-idle-title", osT("Play music on this screen")),
+      this.el("p", "mu-idle-sub", osT("On your phone, pick “{name}” as the speaker.", { name })));
     const how = this.el("div", "mu-how");
     const tile = (icon, title, steps, note) => {
       const t = this.el("div", "mu-how-tile");
@@ -175,8 +175,8 @@ Module.register("MMM-OpenSky-Music", {
       return t;
     };
     const inst = this.installed || { airplay: this.config.airplay, spotify: this.config.spotify };
-    if (this.config.airplay && inst.airplay) how.append(tile(this.ICON.airplay, "AirPlay (iPhone, iPad, Mac)", ["Open Control Center (or the song in Apple Music)", "Tap the AirPlay icon", `Pick “${name}”`], "Works with Apple Music, Podcasts, YouTube and most apps"));
-    if (this.config.spotify && inst.spotify) how.append(tile(this.ICON.spotify, "Spotify (any phone)", ["Play something in Spotify", "Tap the speaker icon at the bottom", `Pick “${name}”`], "Needs Spotify Premium"));
+    if (this.config.airplay && inst.airplay) how.append(tile(this.ICON.airplay, "AirPlay (iPhone, iPad, Mac)", [osT("Open Control Center (or the song in Apple Music)"), osT("Tap the AirPlay icon"), osT("Pick “{name}”", { name })], osT("Works with Apple Music, Podcasts, YouTube and most apps")));
+    if (this.config.spotify && inst.spotify) how.append(tile(this.ICON.spotify, osT("Spotify (any phone)"), [osT("Play something in Spotify"), osT("Tap the speaker icon at the bottom"), osT("Pick “{name}”", { name })], osT("Needs Spotify Premium")));
     card.append(how, this.volumeRow());
     return card;
   },
@@ -184,11 +184,11 @@ Module.register("MMM-OpenSky-Music", {
   notInstalled() {
     const card = this.el("div", "mu-card mu-idle");
     card.append(this.html("div", "mu-idle-ic", window.OpenSkyIcons ? window.OpenSkyIcons.svg("music") : ""),
-      this.el("h2", "mu-idle-title", "Turn this screen into a speaker"),
-      this.el("p", "mu-idle-sub", "The Music add-on lets your family play music here from their phones (AirPlay and Spotify)."));
+      this.el("h2", "mu-idle-title", osT("Turn this screen into a speaker")),
+      this.el("p", "mu-idle-sub", osT("The Music add-on lets your family play music here from their phones (AirPlay and Spotify).")));
     const box = this.el("div", "mu-install");
-    box.append(this.el("span", null, "On the Pi, open Terminal and type:"), this.el("code", null, "opensky addon music"));
-    card.append(box, this.el("p", "mu-idle-note", "Speakers you already have (Sonos, HomePod, Echo…) can be controlled from here through Home Assistant: phone setup → Extras → Music."));
+    box.append(this.el("span", null, osT("On the Pi, open Terminal and type:")), this.el("code", null, "opensky addon music"));
+    card.append(box, this.el("p", "mu-idle-note", osT("Speakers you already have (Sonos, HomePod, Echo…) can be controlled from here through Home Assistant: phone setup → Extras → Music.")));
     return card;
   },
 
@@ -196,7 +196,7 @@ Module.register("MMM-OpenSky-Music", {
     const row = this.el("div", "mu-volume");
     const range = this.el("input", "mu-range");
     range.type = "range"; range.min = "0"; range.max = "100"; range.step = "1";
-    range.setAttribute("aria-label", "Volume");
+    range.setAttribute("aria-label", osT("Volume"));
     range.oninput = () => {
       range.style.setProperty("--v", `${range.value}%`);
       this.volBusyUntil = Date.now() + 1500;   // a finger on the slider wins over replies still on their way
@@ -237,7 +237,8 @@ Module.register("MMM-OpenSky-Music", {
     if (play && play.dataset.playing !== String(n.playing)) {
       play.dataset.playing = String(n.playing);
       play.innerHTML = n.playing ? this.ICON.pause : this.ICON.play;
-      play.setAttribute("aria-label", n.playing ? "Pause" : "Play");
+      play.setAttribute("aria-label", n.playing ? osT("Pause") : osT("Play"));
+
     }
     root.classList && root.classList.toggle("is-paused", !n.playing);
     this.tickProgress(root);

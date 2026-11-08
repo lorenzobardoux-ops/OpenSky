@@ -43,7 +43,14 @@ After changing either file, run **`opensky restart`**. If the screen doesn't com
 - `locale.timeFormat`: `12` (3:00 PM) or `24` (15:00).
 - `locale.units`: `"imperial"` (°F) or `"metric"` (°C).
 - `locale.firstDayOfWeek`: `0` = Sunday, `1` = Monday (month view).
-- `locale.locale`: how dates are written (`"en-US"`, `"en-GB"`…) — on the screen and in date boxes.
+- `locale.locale`: how dates are written (`"en-US"`, `"en-GB"`, `"de-DE"`…) — on the screen and in date boxes.
+- `locale.language`: the language of the screen and the phone page: `"en"` (English) or `"de"` (Deutsch). The phone
+  page has it under Family → Language, which also sets `locale.locale` (`"de-DE"`: dates like 08.11.2026). With
+  `"de"` the on-screen keyboard is German (QWERTZ, umlauts, ß) unless `keyboard.layout` says otherwise, and public
+  holidays from other countries come with their local names. Event titles, list items and the word game's words stay
+  as they are. For a German screen:
+  `"locale": { "language": "de", "locale": "de-DE", "timeFormat": 24, "units": "metric", "firstDayOfWeek": 1 }`
+
 - The **time zone** comes from the Pi itself. To change it: `sudo raspi-config nonint do_change_timezone America/Chicago` (use your zone).
 
 ## Accent color and size
@@ -249,7 +256,9 @@ A small trash-can icon appears on pickup days in the week view. It moves a day l
 "keyboard": { "enabled": true }
 ```
 A keyboard slides up whenever you tap a text box (adding a list item, naming an event). Turn it off with `false`
-if you use a real keyboard. Dates and times use pickers instead.
+if you use a real keyboard. Dates and times use pickers instead. `"layout": "de"` gives the German keyboard
+(QWERTZ with ä, ö, ü, ß), the default when `locale.language` is `"de"`; `"en"` the English one.
+
 
 ## The Settings panel (on the screen)
 | Setting | What it does |

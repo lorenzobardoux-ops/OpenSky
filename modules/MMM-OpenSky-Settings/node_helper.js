@@ -20,6 +20,7 @@ const NodeHelper = require("node_helper");
 const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.js"));   // texts in opensky.json's language
 const dns = require("dns").promises;
 const backup = require(path.join(global.root_path || process.cwd(), "modules", "opensky-lib", "backup.js"));
 const screen = require(path.join(global.root_path || process.cwd(), "modules", "opensky-lib", "screen.js"));
@@ -225,7 +226,7 @@ module.exports = NodeHelper.create({
         this.stopWatching();
         this.offMethod = "soft";
         if (!this.testMethod) { this.settings.screenOff = "soft"; this.save(); this.sendState(); }
-        this.sendSocketNotification("OS_SET_NOTICE", { type: "info", message: "This screen turns itself back on when the signal stops, so OpenSky uses Black screen + dim instead." });
+        this.sendSocketNotification("OS_SET_NOTICE", { type: "info", message: osT("This screen turns itself back on when the signal stops, so OpenSky uses Black screen + dim instead.") });
       }, 25000);
     }
   },
@@ -247,7 +248,7 @@ module.exports = NodeHelper.create({
         if (await screen.isBack(m, avail)) return;
         console.error(`[OpenSky] screen: didn't come back on after "${m}" — switching to Black screen + dim`);
         this.settings.screenOff = "soft"; this.save(); this.sendState();
-        this.sendSocketNotification("OS_SET_NOTICE", { type: "error", message: "The screen didn't come back on by itself. If it's dark, press its power button. OpenSky now uses Black screen + dim, which always comes back." });
+        this.sendSocketNotification("OS_SET_NOTICE", { type: "error", message: osT("The screen didn't come back on by itself. If it's dark, press its power button. OpenSky now uses Black screen + dim, which always comes back.") });
       }, 3000);
     }
   },
@@ -272,14 +273,14 @@ module.exports = NodeHelper.create({
   // little more than that one setting
   readSettings(forChange) {
     try { return JSON.parse(fs.readFileSync(backup.SETTINGS, "utf8")); } catch (e) {
-      if (forChange && e.code !== "ENOENT") throw new Error("opensky.json has a mistake, so nothing was changed — fix it first (opensky check shows where)");
+      if (forChange && e.code !== "ENOENT") throw new Error(osT("opensky.json has a mistake, so nothing was changed — fix it first (opensky check shows where)"));
       return {};
     }
   },
 
   sendPrefs(extra = {}) {
     const s = this.readSettings();
-    const names = { home: "Home", calendar: "Calendar", lists: "Lists", wordgame: "Word Game", timer: "Timer", music: "Music" };
+    const names = { home: osT("Home"), calendar: osT("Calendar"), lists: osT("Lists"), wordgame: osT("Word Game"), timer: osT("Timer"), music: osT("Music") };
     for (const [k, e] of Object.entries(s.embeds || {})) names[k] = (e && e.title) || k;
     const pages = Array.isArray(s.pages) ? s.pages.filter((p) => names[p]) : ["home", "timer"];
     this.sendSocketNotification("OS_SET_PREFS", {
@@ -300,7 +301,7 @@ module.exports = NodeHelper.create({
   readSecrets() {
     try { return JSON.parse(fs.readFileSync(backup.SECRETS, "utf8")); } catch (e) {
       if (e.code === "ENOENT") return {};
-      throw new Error("secrets.json has a mistake, so nothing was changed — fix it first (opensky check shows where)");
+      throw new Error(osT("secrets.json has a mistake, so nothing was changed — fix it first (opensky check shows where)"));
     }
   },
   writeSecrets(sec) {
@@ -329,13 +330,13 @@ module.exports = NodeHelper.create({
     const title = String(w.title || "").trim().slice(0, 24);
     const url = String(w.url || "").trim();
     const icon = (WEB_ICONS.includes(w.icon) ? w.icon : "embed");
-    if (!title) err("Please give it a name");
-    if (url && !/^https?:\/\/\S+$/i.test(url)) err("The address starts with http:// or https://");
+    if (!title) err(osT("Please give it a name"));
+    if (url && !/^https?:\/\/\S+$/i.test(url)) err(osT("The address starts with http:// or https://"));
     const pin = w.pin == null ? null : String(w.pin).replace(/\D/g, "");
-    if (pin && !/^\d{4,8}$/.test(pin)) err("A PIN is 4 to 8 digits");
+    if (pin && !/^\d{4,8}$/.test(pin)) err(osT("A PIN is 4 to 8 digits"));
     let key = w.key;
     if (!key) {   // a new page
-      if (!url) err("Please type the page's address");
+      if (!url) err(osT("Please type the page's address"));
       key = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24) || "web";
       if (/^[^a-z]/.test(key)) key = `web-${key}`;
       const taken = ["home", "calendar", "lists", "wordgame", "timer", "settings"];
@@ -368,7 +369,7 @@ module.exports = NodeHelper.create({
     if ("accent" in patch) {
       // a palette color or a color code (#rgb / #rrggbb, stored as #rrggbb); peach is the default, so it's left out
       const a = accent.normalize(patch.accent);
-      if (!a) return this.sendSocketNotification("OS_SET_NOTICE", { type: "error", message: "That isn't a color — type a code like #3b82f6" });
+      if (!a) return this.sendSocketNotification("OS_SET_NOTICE", { type: "error", message: osT("That isn't a color — type a code like #3b82f6") });
       s.look = s.look || {};
       if (a === "peach") delete s.look.accent; else s.look.accent = a;
     }
@@ -384,7 +385,8 @@ module.exports = NodeHelper.create({
       if (fs.existsSync(backup.SETTINGS)) fs.copyFileSync(backup.SETTINGS, `${backup.SETTINGS}.bak`);
       fs.writeFileSync(`${backup.SETTINGS}.tmp`, JSON.stringify(s, null, 2) + "\n");
       fs.renameSync(`${backup.SETTINGS}.tmp`, backup.SETTINGS);
-    } catch (e) { return this.sendSocketNotification("OS_SET_SYSTEM_RESULT", { ok: false, message: `Couldn't save: ${e.message}` }); }
+    } catch (e) { return this.sendSocketNotification("OS_SET_SYSTEM_RESULT", { ok: false, message: osT("Couldn't save: {error}", { error: e.message }) });
+ }
     this.sendPrefs(restartNeeded ? { restartNeeded: true } : {});
   },
 
@@ -409,7 +411,7 @@ module.exports = NodeHelper.create({
         const target = tag || "origin/main";
         const ahead = await run("git", ["-C", REPO, "merge-base", "--is-ancestor", target, "HEAD"], 5000);
         out.updates = ahead.ok ? 0 : 1;
-        out.updateTo = ahead.ok ? null : (tag || "the newest version");
+        out.updateTo = ahead.ok ? null : (tag || osT("the newest version"));
       }
     }
     if (DRY) out.updates = 0;
@@ -421,20 +423,20 @@ module.exports = NodeHelper.create({
     console.log(`[OpenSky] settings: ${action}${DRY ? " (dry run — nothing done)" : ""}`);
     if (DRY) return say(true, "Done (test mode)");
     if (action === "restart-app") {
-      if (!process.env.INVOCATION_ID) return say(false, "OpenSky isn't running as a service here — use Reload instead");
+      if (!process.env.INVOCATION_ID) return say(false, osT("OpenSky isn't running as a service here — use Reload instead"));
       // --no-block: systemd restarts us after this returns
       const r = await run("systemctl", ["--user", "--no-block", "restart", "opensky.service"], 5000);
-      return say(r.ok, r.ok ? "Restarting…" : "Couldn't restart OpenSky");
+      return say(r.ok, r.ok ? osT("Restarting…") : osT("Couldn't restart OpenSky"));
     }
     if (action === "update") {
       // runs outside OpenSky's own service, so it survives the restart at its end
       const r = await run("systemd-run", ["--user", "--unit=opensky-update", "--collect", path.join(REPO, "tools", "opensky"), "update"], 10000);
-      return say(r.ok, r.ok ? "Updating — the screen restarts by itself when it's done (a few minutes)" : "Couldn't start the update (is one already running?)");
+      return say(r.ok, r.ok ? osT("Updating — the screen restarts by itself when it's done (a few minutes)") : osT("Couldn't start the update (is one already running?)"));
     }
     if (action === "reboot" || action === "shutdown") {
       const r = await run("sudo", ["-n", "systemctl", action === "reboot" ? "reboot" : "poweroff"], 10000);
-      return say(r.ok, r.ok ? (action === "reboot" ? "Restarting the Pi…" : "Shutting down — wait for the green light to stop before unplugging") : "This Pi doesn't allow that without a password");
+      return say(r.ok, r.ok ? (action === "reboot" ? osT("Restarting the Pi…") : osT("Shutting down — wait for the green light to stop before unplugging")) : osT("This Pi doesn't allow that without a password"));
     }
-    return say(false, "Unknown action");
+    return say(false, osT("Unknown action"));
   }
 });

@@ -7,6 +7,7 @@
  */
 const NodeHelper = require("node_helper");
 const path = require("path");
+const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.js"));   // texts in opensky.json's language
 const CalendarFetcher = require(path.join(global.root_path, "defaultmodules", "calendar", "calendarfetcher.js"));
 const { secret } = require(path.join(global.root_path, "modules", "opensky-lib", "secrets.js"));
 const local = require(path.join(global.root_path, "modules", "opensky-lib", "local-calendar.js"));
@@ -91,10 +92,11 @@ module.exports = NodeHelper.create({
       if (src.type === "google") { this.startGoogle(src, p.days); continue; }                             // Google Calendar API
       if (this.fetchers.has(src.name)) { this.fetchers.get(src.name).broadcastEvents(); continue; }   // page reload
       let url = src.url || secret(`calendar.sources.${src.name}`);
-      if (!url) { this.error(src.name, `no link for "${src.name}" (set calendar.sources in opensky.json or secrets.json)`); continue; }
+      if (!url) { this.error(src.name, osT("no link for \"{name}\" (set calendar.sources in opensky.json or secrets.json)", { name: src.name })); continue; }
       url = String(url).replace(/^webcal:\/\//i, "https://");
       if (!src.url) privateLinks.set(url, `calendar "${src.name}"`);   // from secrets.json (or the CalDAV feed)
-      try { new URL(url); } catch (e) { this.error(src.name, `"${src.name}" link isn't a valid URL`); continue; }
+      try { new URL(url); } catch (e) { this.error(src.name, osT("\"{name}\" link isn't a valid URL", { name: src.name }));
+ continue; }
       const f = new CalendarFetcher(url, Math.max(1, src.fetchMinutes || 5) * 60 * 1000, [], 1000, p.days || 400, undefined, true, false);
       f.onReceive((fetcher) => {
         if (this.lastError) this.lastError.delete(src.name);

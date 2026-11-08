@@ -6,6 +6,7 @@
  */
 const NodeHelper = require("node_helper");
 const path = require("path");
+const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.js"));   // texts in opensky.json's language
 const local = require(path.join(global.root_path, "modules", "opensky-lib", "local-calendar.js"));
 const google = require(path.join(global.root_path, "modules", "opensky-lib", "google-calendar.js"));
 
@@ -22,7 +23,7 @@ module.exports = NodeHelper.create({
   async handle({ op, calendar, ref, data }) {
     const cal = (this.editable || []).find((c) => c.name === calendar);
     if (!cal) throw new Error(`"${calendar}" can't be changed from this screen`);
-    if (!["create", "update", "delete"].includes(op)) throw new Error("Unknown change");
+    if (!["create", "update", "delete"].includes(op)) throw new Error(osT("Unknown change"));
     if (cal.type === "local") {
       if (op === "create") return local.create(calendar, data);
       if (op === "update") return local.update(calendar, ref, data);
@@ -42,9 +43,10 @@ module.exports = NodeHelper.create({
         body: JSON.stringify({ ...(ref || {}), ...(data || {}) }), signal: AbortSignal.timeout(25000)
       });
     } catch (e) {
-      throw new Error("Can't reach the calendar service. Try again in a minute.");
+      throw new Error(osT("Can't reach the calendar service. Try again in a minute."));
     }
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json.error || `Calendar service error (HTTP ${res.status})`);
+    if (!res.ok) throw new Error(json.error || osT("Calendar service error (HTTP {status})", { status: res.status })
+);
   }
 });

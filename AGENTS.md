@@ -43,6 +43,10 @@ The settings files are found through environment variables set by the services (
 ## Conventions for code changes
 - Module fields/methods must not reuse MagicMirror's `Module` names (`data`, `show`, `hide`, `config`, `name`…).
 - No emoji in the UI (Raspberry Pi OS has no color-emoji font) — use inline SVG.
+- Every text people see goes through `osT("English text", { placeholders })` (`lib/client/i18n.js`: screen, node
+  helpers and phone page) and gets a German line in that file's table; `tools/test-i18n.js` fails otherwise. Never
+  match a shown message as text in code (it may be German) — send a flag next to it.
+
 - Errors people see are plain and say what to do ("check the app-specific password in secrets.json").
 - Private values never reach a log or the page: node helpers read `secrets.json`; the test harness fails a run if
   any `secrets.json` value appears in MagicMirror's output.

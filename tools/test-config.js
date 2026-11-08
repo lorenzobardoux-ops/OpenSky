@@ -100,6 +100,18 @@ ok("18 the Pi's rule (lib/accent.js) and the screen/phone's (OpenSkyAccent) agre
   SA.light("#fff4cc") && SA.light("#ffffff") && !SA.light("#e8663f") && !SA.light("#1d4ed8"));
 delete global.window; delete global.document;
 
+// German (locale.language "de"): page names, the header's fallback title and the timer buttons in German, a QWERTZ
+// keyboard, dates as de-DE; English stays the default
+const de = build({ locale: { language: "de", locale: "de-DE" }, pages: ["home", "calendar", "lists", "timer"] });
+const sideDe = mod(de, "MMM-OpenSky-Sidebar").config.pages.map((p) => p.label);
+ok("19 German: sidebar, header, timer buttons and keyboard in German; dates de-DE",
+  JSON.stringify(sideDe) === JSON.stringify(["Start", "Kalender", "Listen", "Timer"]) && mod(de, "MMM-OpenSky-Header").config.title === "Unsere Familie" &&
+  mod(de, "MMM-OpenSky-Timer").config.quickAddButtons[0].label === "+5 Min." && mod(de, "MMM-OpenSky-Keyboard").config.layout === "de" && de.locale === "de-DE" && de.language === "de",
+  { sideDe, kb: mod(de, "MMM-OpenSky-Keyboard").config.layout });
+const en = build({ pages: ["home", "calendar"] });
+ok("20 English stays the default", mod(en, "MMM-OpenSky-Sidebar").config.pages[0].label === "Home" && mod(en, "MMM-OpenSky-Keyboard").config.layout === "en" && en.language === "en");
+
+
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`SUMMARY pass=${passed} fail=${failed}`);

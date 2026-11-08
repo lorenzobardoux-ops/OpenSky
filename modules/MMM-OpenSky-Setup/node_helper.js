@@ -9,7 +9,7 @@
  * OPENSKY_DRY_RUN=1 (tests): nothing is restarted.
  *
  * Screen ↔ helper:  OS_SETUP_INIT → OS_SETUP_WELCOME {show}   OS_SETUP_START → OS_SETUP_READY {urls, code, expiresAt}
- *   OS_SETUP_NEWCODE → OS_SETUP_READY   OS_SETUP_STOP   → events OS_SETUP_PAIRED, OS_SETUP_SAVED, OS_SETUP_STOPPED {reason}
+ *   OS_SETUP_NEWCODE → OS_SETUP_READY   OS_SETUP_STOP   → events OS_SETUP_PAIRED, OS_SETUP_SAVED, OS_SETUP_STOPPED {reason, failed?}
  * Phone ↔ server (JSON; POSTs need the header "X-OpenSky: 1"):
  *   POST /api/pair {code} · GET /api/state · POST /api/save {settings, secrets} · GET /api/geocode?q= · POST /api/done
  *   Google Calendar sign-in: GET /api/google · POST /api/google/start {clientId?, clientSecret?} → {url}
@@ -22,6 +22,7 @@ const http = require("http");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.js"));   // texts in opensky.json's language
 const crypto = require("crypto");
 const { execFile } = require("child_process");
 const google = require(path.join(global.root_path || process.cwd(), "modules", "opensky-lib", "google-calendar.js"));
@@ -40,6 +41,7 @@ const STATIC = {
   "/app.js": ["app.js", "text/javascript; charset=utf-8"],
   "/app.css": ["app.css", "text/css; charset=utf-8"],
   "/opensky-client.js": [path.join("..", "..", "..", "lib", "client", "opensky-client.js"), "text/javascript; charset=utf-8"],
+  "/i18n.js": [path.join("..", "..", "..", "lib", "client", "i18n.js"), "text/javascript; charset=utf-8"],
   "/icon.png": [path.join("..", "..", "..", "lib", "client", "assets", "opensky-icon.png"), "image/png"],
   "/apple-touch-icon.png": [path.join("..", "..", "..", "lib", "client", "assets", "opensky-touch-icon.png"), "image/png"]
 };
@@ -59,7 +61,7 @@ const readJson = (f, fallback) => { try { return JSON.parse(fs.readFileSync(f, "
 function secretsForChange() {
   try { return JSON.parse(fs.readFileSync(SECRETS, "utf8")); } catch (e) {
     if (e.code === "ENOENT") return {};
-    throw Object.assign(new Error("secrets.json on the Pi has a mistake, so nothing was saved — fix it first (opensky check shows where)"), { status: 409 });
+    throw Object.assign(new Error(osT("secrets.json on the Pi has a mistake, so nothing was saved — fix it first (opensky check shows where)")), { status: 409 });
   }
 }
 function writeJson(file, data, mode) {
@@ -144,12 +146,13 @@ module.exports = NodeHelper.create({
     this.sessions = new Set();
     this.server = http.createServer((req, res) => this.handle(req, res).catch((e) => {
       console.error(`[OpenSky] setup: ${e.message}`);
-      this.send(res, 500, { error: "Something went wrong on the Pi" });
+      this.send(res, 500, { error: osT("Something went wrong on the Pi") });
     }));
     this.server.on("error", (e) => {
       console.error(`[OpenSky] setup server: ${e.message}`);
       this.server = null;
-      this.sendSocketNotification("OS_SETUP_STOPPED", { reason: e.code === "EADDRINUSE" ? `Port ${this.port} is busy` : "Couldn't start" });
+      this.sendSocketNotification("OS_SETUP_STOPPED", { failed: true, reason: e.code === "EADDRINUSE" ? osT("Port {port} is busy", { port: this.port }) : osT("Couldn't start") });
+
     });
     this.server.listen(this.port, "0.0.0.0", () => { console.log(`[OpenSky] phone setup open on port ${this.port}`); this.touch(); this.ready(); });
   },
@@ -199,28 +202,33 @@ module.exports = NodeHelper.create({
   body(req, limit = 256 * 1024) {
     return new Promise((resolve, reject) => {
       let size = 0; const chunks = [];
-      req.on("data", (c) => { size += c.length; if (size > limit) { reject(new Error("That's too big")); req.destroy(); } else chunks.push(c); });
+      req.on("data", (c) => { size += c.length; if (size > limit) { reject(new Error(osT("That's too big"))); req.destroy(); } else chunks.push(c); });
       req.on("end", () => { try { resolve(chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {}); } catch (e) { reject(new Error("bad JSON")); } });
       req.on("error", reject);
     });
   },
 
   async handle(req, res) {
-    if (!this.hostOk(req)) return this.send(res, 421, { error: "Wrong address" });
+    if (!this.hostOk(req)) return this.send(res, 421, { error: osT("Wrong address") });
     const url = new URL(req.url, "http://x");
     if (req.method === "GET" && STATIC[url.pathname]) {
       const [file, type] = STATIC[url.pathname];
-      return this.send(res, 200, fs.readFileSync(path.join(PHONE, file)), { "Content-Type": type });
+      let body = fs.readFileSync(path.join(PHONE, file));
+      // the translations, already set to opensky.json's language (so even the pairing page is in it)
+      if (url.pathname === "/i18n.js") body = `${body}\nwindow.OpenSkyI18n.setLanguage(${JSON.stringify(require(path.join(PHONE, file)).language())});\n`;
+      return this.send(res, 200, body, { "Content-Type": type });
+
     }
-    if (!url.pathname.startsWith("/api/")) return this.send(res, 404, { error: "Not found" });
-    if (req.method === "POST" && req.headers["x-opensky"] !== "1") return this.send(res, 403, { error: "Refused" });
+    if (!url.pathname.startsWith("/api/")) return this.send(res, 404, { error: osT("Not found") });
+    if (req.method === "POST" && req.headers["x-opensky"] !== "1") return this.send(res, 403, { error: osT("Refused") });
 
     if (url.pathname === "/api/pair" && req.method === "POST") {
       const { code } = await this.body(req);
       // checked once the code has arrived: many requests can be waiting for their bodies at the same moment
       const now = Date.now();
-      if (this.lockedUntil > now) return this.send(res, 429, { error: `Too many tries — wait ${Math.ceil((this.lockedUntil - now) / 1000)} s` });
-      if (now > this.codeUntil) return this.send(res, 410, { error: "That code has expired — tap \"New code\" on the screen" });
+      if (this.lockedUntil > now) return this.send(res, 429, { error: osT("Too many tries — wait {n} s", { n: Math.ceil((this.lockedUntil - now) / 1000) }) });
+
+      if (now > this.codeUntil) return this.send(res, 410, { error: osT("That code has expired — tap \"New code\" on the screen") });
       const a = Buffer.from(String(code || "").replace(/\D/g, "")), b = Buffer.from(this.code);
       if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
         const token = crypto.randomBytes(32).toString("hex");
@@ -233,18 +241,18 @@ module.exports = NodeHelper.create({
       if (this.wrong % 5 === 0) this.lockedUntil = now + 60 * 1000;
       if (this.wrong >= 15) {   // a new code, and the pause still holds
         this.newCode(); this.lockedUntil = now + 60 * 1000; this.ready();
-        return this.send(res, 401, { error: "Too many wrong codes — the screen shows a new one" });
+        return this.send(res, 401, { error: osT("Too many wrong codes — the screen shows a new one") });
       }
-      return this.send(res, 401, { error: "That's not the code on the screen" });
+      return this.send(res, 401, { error: osT("That's not the code on the screen") });
     }
 
-    if (!this.authed(req)) return this.send(res, 401, { error: "Not paired", pair: true });
+    if (!this.authed(req)) return this.send(res, 401, { error: osT("Not paired"), pair: true });
     this.touch();   // only a paired phone keeps setup open (anyone else on the Wi-Fi can't hold it open forever)
 
     if (url.pathname === "/api/state" && req.method === "GET") {
       const settings = readJson(SETTINGS, null);
       // a damaged opensky.json: showing the example instead would let Save replace the family's settings with it
-      if (!settings && fs.existsSync(SETTINGS)) return this.send(res, 409, { error: "opensky.json on the Pi has a mistake — fix it first (opensky check shows where)" });
+      if (!settings && fs.existsSync(SETTINGS)) return this.send(res, 409, { error: osT("opensky.json on the Pi has a mistake — fix it first (opensky check shows where)") });
       let presets = [];
       try { presets = fs.readdirSync(path.join(__dirname, "..", "..", "lib", "pickup-presets")).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)); } catch (e) { /* none */ }
       return this.send(res, 200, {
@@ -256,8 +264,8 @@ module.exports = NodeHelper.create({
 
     if (url.pathname === "/api/save" && req.method === "POST") {
       const { settings, secrets } = await this.body(req);
-      if (!settings || typeof settings !== "object" || Array.isArray(settings)) return this.send(res, 400, { error: "Nothing to save" });
-      if (settings.pages && !Array.isArray(settings.pages)) return this.send(res, 400, { error: "Pages must be a list" });
+      if (!settings || typeof settings !== "object" || Array.isArray(settings)) return this.send(res, 400, { error: osT("Nothing to save") });
+      if (settings.pages && !Array.isArray(settings.pages)) return this.send(res, 400, { error: osT("Pages must be a list") });
       const changes = secrets && typeof secrets === "object" ? Object.entries(secrets) : [];
       let cur = null;
       if (changes.length) { try { cur = secretsForChange(); } catch (e) { return this.send(res, e.status, { error: e.message }); } }
@@ -285,7 +293,7 @@ module.exports = NodeHelper.create({
         const d = await r.json();
         return this.send(res, 200, { results: (d.results || []).map((x) => ({ name: x.name, admin1: x.admin1 || "", country: x.country || "", country_code: x.country_code || "", latitude: x.latitude, longitude: x.longitude, timezone: x.timezone || "" })) });
       } catch (e) {
-        return this.send(res, 502, { error: "Couldn't look that up — is the Pi online?" });
+        return this.send(res, 502, { error: osT("Couldn't look that up — is the Pi online?") });
       }
     }
 
@@ -302,7 +310,7 @@ module.exports = NodeHelper.create({
         writeJson(SECRETS, cur, 0o600);
       }
       const g = cur.google || {};
-      if (!g.clientId || !g.clientSecret) return this.send(res, 400, { error: "Paste the Client ID and Client secret first" });
+      if (!g.clientId || !g.clientSecret) return this.send(res, 400, { error: osT("Paste the Client ID and Client secret first") });
       try { this.googlePending = google.authUrl(g.clientId); } catch (e) { return this.send(res, e.status || 400, { error: e.message }); }
       return this.send(res, 200, { url: this.googlePending.url });
     }
@@ -371,6 +379,6 @@ module.exports = NodeHelper.create({
       }, 300);
       return;
     }
-    return this.send(res, 404, { error: "Not found" });
+    return this.send(res, 404, { error: osT("Not found") });
   }
 });

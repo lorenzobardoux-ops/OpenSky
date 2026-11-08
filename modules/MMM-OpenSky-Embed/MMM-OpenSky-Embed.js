@@ -16,6 +16,8 @@ Module.register("MMM-OpenSky-Embed", {
     zoom: 1             // e.g. 0.8 to fit more of a busy dashboard
   },
 
+  getScripts() { return ["modules/opensky-lib/client/i18n.js"]; },
+
   getStyles() { return ["MMM-OpenSky-Embed.css"]; },
 
   start() {
@@ -76,7 +78,7 @@ Module.register("MMM-OpenSky-Embed", {
       void this.root.offsetWidth;
       this.root.querySelector(".oe-dots")?.classList.add("shake");
       if (p.wait) this.pause(p.wait);
-      else this.message("Wrong PIN — try again", true);
+      else this.message(osT("Wrong PIN — try again"), true);
     }
   },
 
@@ -88,16 +90,16 @@ Module.register("MMM-OpenSky-Embed", {
     this.root.innerHTML = `
       <div class="oe-frame"></div>
       <div class="oe-tools">
-        <button class="oe-tool oe-back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <button class="oe-tool oe-reload" aria-label="Reload"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg></button>
-        ${this.config.locked ? `<button class="oe-tool oe-lockbtn" aria-label="Lock"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></button>` : ""}
+        <button class="oe-tool oe-back" aria-label="${osT("Back")}"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="oe-tool oe-reload" aria-label="${osT("Reload")}"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg></button>
+        ${this.config.locked ? `<button class="oe-tool oe-lockbtn" aria-label="${osT("Lock")}"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></button>` : ""}
       </div>`;
     const v = document.createElement("webview");
     v.className = "oe-view";
     v.setAttribute("src", url);
     v.addEventListener("did-fail-load", (e) => {
       if (e.isMainFrame === false || e.errorCode === -3) return;   // -3 = aborted (normal while navigating)
-      this.showError(`Couldn't open ${this.config.title}. Is it switched on and on the same Wi-Fi?`);
+      this.showError(osT("Couldn't open {page}. Is it switched on and on the same Wi-Fi?", { page: this.config.title }));
     });
     v.addEventListener("dom-ready", () => {
       if (this.config.zoom && this.config.zoom !== 1) v.setZoomFactor(this.config.zoom);
@@ -125,7 +127,7 @@ Module.register("MMM-OpenSky-Embed", {
       <div class="oe-card oe-error">
         <div class="oe-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg></div>
         <div class="oe-title"></div><div class="oe-sub"></div>
-        <button class="oe-btn">Try again</button>
+        <button class="oe-btn">${osT("Try again")}</button>
       </div>`;
     this.root.querySelector(".oe-title").textContent = this.config.title;
     this.root.querySelector(".oe-sub").textContent = message;
@@ -158,7 +160,7 @@ Module.register("MMM-OpenSky-Embed", {
       this.busy = true;
       this.sendSocketNotification("OS_EMBED_UNLOCK", { key: this.config.key, pin: this.entered });
       clearTimeout(this._busyTimer);
-      this._busyTimer = setTimeout(() => { if (this.busy) { this.busy = false; this.entered = ""; this.renderDots(); this.message("Couldn't check the PIN — try again", true); } }, 6000);
+      this._busyTimer = setTimeout(() => { if (this.busy) { this.busy = false; this.entered = ""; this.renderDots(); this.message(osT("Couldn't check the PIN — try again"), true); } }, 6000);
     }
   },
 
@@ -166,7 +168,7 @@ Module.register("MMM-OpenSky-Embed", {
     this.pausedLeft = secs;
     const tick = () => {
       if (this.pausedLeft <= 0) { clearInterval(this._pauseTimer); this.message(""); this.root.classList.remove("oe-paused"); return; }
-      this.message(`Too many tries — wait ${this.pausedLeft} s`, true);
+      this.message(osT("Too many tries — wait {n} s", { n: this.pausedLeft }), true);
       this.pausedLeft--;
     };
     this.root.classList.add("oe-paused");
@@ -179,17 +181,18 @@ Module.register("MMM-OpenSky-Embed", {
     const r = this.root;
     if (!r || this.state === "open" || this.state === "error") return;
     r.classList.remove("oe-paused");
-    if (this.state !== "locked") { r.innerHTML = `<div class="oe-card"><div class="oe-sub">Loading ${this.config.title.replace(/[<>&]/g, "")}…</div></div>`; return; }
+    if (this.state !== "locked") { r.innerHTML = `<div class="oe-card"><div class="oe-sub">${osT("Loading {page}…", { page: this.config.title.replace(/[<>&]/g, "") })}</div></div>`; return; }
     const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
     r.innerHTML = `
       <div class="oe-card">
         <div class="oe-icon"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></div>
         <div class="oe-title"></div>
-        <div class="oe-sub">Enter the PIN</div>
+        <div class="oe-sub">${osT("Enter the PIN")}</div>
         <div class="oe-dots"></div>
         <div class="oe-msg" aria-live="polite"></div>
         <div class="oe-pad">${keys.map((k) => k === "" ? "<span></span>"
-          : `<button class="oe-key${k === "back" ? " oe-del" : ""}" data-k="${k}" aria-label="${k === "back" ? "Delete" : k}">${k === "back"
+          : `<button class="oe-key${k === "back" ? " oe-del" : ""}" data-k="${k}" aria-label="${k === "back" ? osT("Delete") : k}"
+>${k === "back"
             ? `<svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>` : k}</button>`).join("")}</div>
       </div>`;
     r.querySelector(".oe-title").textContent = this.config.title;

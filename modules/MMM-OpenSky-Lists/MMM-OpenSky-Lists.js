@@ -17,7 +17,7 @@ Module.register("MMM-OpenSky-Lists", {
   SOURCE: "opensky",
 
   getStyles() { return ["MMM-OpenSky-Lists.css"]; },
-  getScripts() { return ["modules/opensky-lib/client/opensky-client.js"]; },
+  getScripts() { return ["modules/opensky-lib/client/i18n.js", "modules/opensky-lib/client/opensky-client.js"]; },
 
   start() {
     this.lists = [];
@@ -69,7 +69,7 @@ Module.register("MMM-OpenSky-Lists", {
     return new Promise((resolve) => {
       this.calls.set(id, resolve);
       this.sendSocketNotification("OS_LIST_OP", { id, op, listId, ...extra });
-      setTimeout(() => { if (this.calls.has(id)) { this.calls.delete(id); resolve({ ok: false, error: "No answer from the lists service — try again" }); } }, 30000);
+      setTimeout(() => { if (this.calls.has(id)) { this.calls.delete(id); resolve({ ok: false, error: osT("No answer from the lists service — try again") }); } }, 30000);
     });
   },
 
@@ -96,7 +96,7 @@ Module.register("MMM-OpenSky-Lists", {
     if (!r.ok) {
       this.committing.delete(p.item.id);
       this.broadcast();
-      window.OpenSkyToast(`Couldn't check off “${p.item.text}”. ${r.error || ""}`.trim(), "error");
+      window.OpenSkyToast(`${osT("Couldn't check off “{item}”.", { item: p.item.text })} ${r.error || ""}`.trim(), "error");
     }
   },
 
@@ -112,12 +112,12 @@ Module.register("MMM-OpenSky-Lists", {
     if (!this.undoBar) {
       const bar = document.createElement("div");
       bar.className = "osl-undo";
-      bar.innerHTML = `<span class="osl-undo-text"></span><button class="osl-undo-btn">Undo</button>`;
+      bar.innerHTML = `<span class="osl-undo-text"></span><button class="osl-undo-btn">${osT("Undo")}</button>`;
       bar.querySelector(".osl-undo-btn").onclick = () => this.undo();
       document.body.appendChild(bar);
       this.undoBar = bar;
     }
-    this.undoBar.querySelector(".osl-undo-text").textContent = `Checked off “${text}”`;
+    this.undoBar.querySelector(".osl-undo-text").textContent = osT("Checked off “{item}”", { item: text });
     this.undoBar.classList.add("show");
   },
 
@@ -126,8 +126,8 @@ Module.register("MMM-OpenSky-Lists", {
   /* ---------------- popups ---------------- */
   openAdd(list) {
     this.openPopup({
-      title: `Add to ${list.title}`, value: "", placeholder: "Type an item…", list,
-      buttons: [{ cls: "osl-cancel", label: "Cancel" }, { cls: "osl-primary", label: "Add", busy: "Adding…", main: true,
+      title: osT("Add to {list}", { list: list.title }), value: "", placeholder: osT("Type an item…"), list,
+      buttons: [{ cls: "osl-cancel", label: osT("Cancel") }, { cls: "osl-primary", label: osT("Add"), busy: osT("Adding…"), main: true,
         run: (text) => this.call("add", list.id, { text }) }]
     });
   },
@@ -135,12 +135,12 @@ Module.register("MMM-OpenSky-Lists", {
   openEdit(list, item) {
     if (this.pending && this.pending.item.id === item.id) return;
     this.openPopup({
-      title: list.title, value: item.text, placeholder: "Item", list,
+      title: list.title, value: item.text, placeholder: osT("Item"), list,
       buttons: [
-        { cls: "osl-danger", label: "Delete", busy: "Deleting…", run: () => this.call("remove", list.id, { item }) },
-        { cls: "osl-done", label: "Done ✓", run: () => { this.closePopup(); this.checkOff(list, item); return null; } },
-        { cls: "osl-cancel", label: "Cancel" },
-        { cls: "osl-primary", label: "Save", busy: "Saving…", main: true,
+        { cls: "osl-danger", label: osT("Delete"), busy: osT("Deleting…"), run: () => this.call("remove", list.id, { item }) },
+        { cls: "osl-done", label: osT("Done ✓"), run: () => { this.closePopup(); this.checkOff(list, item); return null; } },
+        { cls: "osl-cancel", label: osT("Cancel") },
+        { cls: "osl-primary", label: osT("Save"), busy: osT("Saving…"), main: true,
           run: (text) => (text === item.text ? null : this.call("edit", list.id, { item, text })) }
       ]
     });
@@ -152,7 +152,7 @@ Module.register("MMM-OpenSky-Lists", {
     overlay.className = "osl-overlay";
     overlay.innerHTML = `
       <div class="osl-modal" role="dialog">
-        <div class="osl-head"><span class="osl-title"></span><button class="osl-x" aria-label="Close">×</button></div>
+        <div class="osl-head"><span class="osl-title"></span><button class="osl-x" aria-label="${osT("Close")}">×</button></div>
         <input type="text" class="osl-input" maxlength="500" autocomplete="off" />
         <div class="osl-error" hidden></div>
         <div class="osl-actions"></div>
@@ -174,7 +174,7 @@ Module.register("MMM-OpenSky-Lists", {
         if (this.busy) return;
         if (!b.run) { this.closePopup(); return; }
         const text = input.value.replace(/\s+/g, " ").trim();
-        if (b.main && !text) { err.textContent = "Please type something first"; err.hidden = false; input.focus(); return; }
+        if (b.main && !text) { err.textContent = osT("Please type something first"); err.hidden = false; input.focus(); return; }
         const pending = b.run(text);
         if (!pending) { this.closePopup(); return; }
         this.busy = true;
@@ -185,7 +185,8 @@ Module.register("MMM-OpenSky-Lists", {
         if (r.ok) { this.closePopup(); return; }
         el.textContent = b.label;
         actions.querySelectorAll("button").forEach((x) => { x.disabled = false; });
-        err.textContent = r.error || "Something went wrong";
+        err.textContent = r.error || osT("Something went wrong");
+
         err.hidden = false;
       };
       if (b.main) main = el;

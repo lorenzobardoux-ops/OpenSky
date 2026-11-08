@@ -13,7 +13,7 @@ Module.register("MMM-OpenSky-EventEditor", {
   },
 
   getStyles() { return ["MMM-OpenSky-EventEditor.css"]; },
-  getScripts() { return ["modules/opensky-lib/client/opensky-client.js"]; },
+  getScripts() { return ["modules/opensky-lib/client/i18n.js", "modules/opensky-lib/client/opensky-client.js"]; },
 
   start() {
     this.currentEvent = null;
@@ -91,8 +91,8 @@ Module.register("MMM-OpenSky-EventEditor", {
 
     if (this.mode === "day") modal.appendChild(this.createDayMode());
     else if (this.mode === "view") modal.appendChild(this.createViewMode());
-    else if (this.mode === "edit") modal.appendChild(this.createFormMode("Edit Event", "Save Changes", () => this.saveEvent()));
-    else if (this.mode === "create") modal.appendChild(this.createFormMode("New Event", "Add Event", () => this.createEvent()));
+    else if (this.mode === "edit") modal.appendChild(this.createFormMode(osT("Edit Event"), osT("Save Changes"), () => this.saveEvent()));
+    else if (this.mode === "create") modal.appendChild(this.createFormMode(osT("New Event"), osT("Add Event"), () => this.createEvent()));
     else if (this.mode === "confirm-delete") modal.appendChild(this.createConfirmDelete());
 
     overlay.appendChild(modal);
@@ -106,7 +106,7 @@ Module.register("MMM-OpenSky-EventEditor", {
     if (back) {
       const backBtn = document.createElement("button");
       backBtn.className = "event-back-btn";
-      backBtn.setAttribute("aria-label", "Back");
+      backBtn.setAttribute("aria-label", osT("Back"));
       backBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>`;
       backBtn.onclick = back;
       header.appendChild(backBtn);
@@ -139,20 +139,20 @@ Module.register("MMM-OpenSky-EventEditor", {
     const container = document.createElement("div");
     container.className = "event-view-container";
     const back = this.day ? () => { this.mode = "day"; this.currentEvent = null; this.render(); } : null;
-    container.appendChild(this.createHeader(ev.title || "Untitled Event", { editButton: editable, titleClass: "event-view-title", back }));
+    container.appendChild(this.createHeader(ev.title || osT("Untitled Event"), { editButton: editable, titleClass: "event-view-title", back }));
 
     const details = document.createElement("div");
     details.className = "event-details";
     details.appendChild(this.createDetailRow(this.getClockIcon(), this.formatEventDateTime(ev)));
     if (ev.location) details.appendChild(this.createDetailRow(this.getPinIcon(), ev.location));
     if (ev.description) details.appendChild(this.createDetailRow(this.getDocIcon(), ev.description));
-    details.appendChild(this.createDetailRow(this.getCalendarIcon(), ev.calendarName || "Calendar"));
+    details.appendChild(this.createDetailRow(this.getCalendarIcon(), ev.calendarName || osT("Calendar")));
     container.appendChild(details);
 
     if (editable) {
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "event-delete-btn";
-      deleteBtn.textContent = "Delete Event";
+      deleteBtn.textContent = osT("Delete Event");
       deleteBtn.onclick = () => { this.mode = "confirm-delete"; this.render(); };
       container.appendChild(deleteBtn);
     }
@@ -171,7 +171,7 @@ Module.register("MMM-OpenSky-EventEditor", {
     if (!this.day.events.length) {
       const empty = document.createElement("div");
       empty.className = "day-empty";
-      empty.textContent = "Nothing planned";
+      empty.textContent = osT("Nothing planned");
       list.appendChild(empty);
     }
     this.day.events.forEach((ev) => {
@@ -194,7 +194,7 @@ Module.register("MMM-OpenSky-EventEditor", {
     if (!this.config.editable.length) return container;   // read-only calendars: no "+ Add Event"
     const add = document.createElement("button");
     add.className = "event-btn event-btn-primary day-add-btn";
-    add.textContent = "+ Add Event";
+    add.textContent = osT("+ Add Event");
     add.onclick = () => {
       // Today: next hour from now. Other days: 9:00 AM (createFormMode rounds up an hour).
       const now = new Date();
@@ -214,37 +214,39 @@ Module.register("MMM-OpenSky-EventEditor", {
 
   // "All day", "4:00 PM", or "Starts 4:00 PM"/"Until 11:00 AM" for multi-day timed events
   shortWhen(ev, day) {
-    if (ev.allDay) return "All day";
+    if (ev.allDay) return osT("All day");
     const start = new Date(ev.startDate);
     const end = new Date(ev.endDate);
     const t = (d) => d.toLocaleTimeString(this.locale(), { hour: "numeric", minute: "2-digit", hour12: this.hour12() });
     const sameDay = (a) => a.toDateString() === day.toDateString();
     if (sameDay(start)) return t(start);
-    if (sameDay(end)) return `Until ${t(end)}`;
-    return "All day";
+    if (sameDay(end)) return osT("Until {time}", { time: t(end) });
+    return osT("All day");
   },
 
   createConfirmDelete() {
     const container = document.createElement("div");
     container.className = "event-view-container";
-    container.appendChild(this.createHeader("Delete this event?", { titleClass: "event-view-title" }));
+    container.appendChild(this.createHeader(osT("Delete this event?"), { titleClass: "event-view-title" }));
 
     const text = document.createElement("div");
     text.className = "event-confirm-text";
     const cal = this.currentEvent.calendarName;
-    const everywhere = (this.editableCal(cal) || {}).type === "caldav" ? " on every device" : "";
-    text.textContent = `"${this.currentEvent.title}" will be removed from the ${cal} calendar${everywhere}.`;
+    const everywhere = (this.editableCal(cal) || {}).type === "caldav";
+    const v = { title: this.currentEvent.title, calendar: cal };
+    text.textContent = everywhere ? osT("\"{title}\" will be removed from the {calendar} calendar on every device.", v) : osT("\"{title}\" will be removed from the {calendar} calendar.", v);
+
     container.appendChild(text);
 
     const actions = document.createElement("div");
     actions.className = "event-actions";
     const keep = document.createElement("button");
     keep.className = "event-btn event-btn-secondary";
-    keep.textContent = "Keep";
+    keep.textContent = osT("Keep");
     keep.onclick = () => { this.mode = "view"; this.render(); };
     const del = document.createElement("button");
     del.className = "event-btn event-btn-danger";
-    del.textContent = "Delete";
+    del.textContent = osT("Delete");
     del.onclick = () => this.deleteEvent(del);
     actions.appendChild(keep);
     actions.appendChild(del);
@@ -275,7 +277,7 @@ Module.register("MMM-OpenSky-EventEditor", {
     actions.className = "event-actions";
     const cancelBtn = document.createElement("button");
     cancelBtn.className = "event-btn event-btn-secondary";
-    cancelBtn.textContent = "Cancel";
+    cancelBtn.textContent = osT("Cancel");
     cancelBtn.onclick = () => {
       if (this.mode === "edit") { this.mode = "view"; this.render(); }
       else if (this.day) { this.mode = "day"; this.render(); }
@@ -297,13 +299,13 @@ Module.register("MMM-OpenSky-EventEditor", {
     form.id = "event-form";
     form.onsubmit = (e) => e.preventDefault();
 
-    form.appendChild(this.createFormGroup("Title", "text", "event-title", event.title || "", true, "Event name"));
+    form.appendChild(this.createFormGroup(osT("Title"), "text", "event-title", event.title || "", true, osT("Event name")));
 
     // Which calendar a new event goes to (only when there's a choice)
     if (this.mode === "create" && this.config.editable.length > 1) {
       const group = document.createElement("div");
       group.className = "form-group";
-      group.innerHTML = `<label for="event-calendar">Calendar</label><select id="event-calendar" class="form-input"></select>`;
+      group.innerHTML = `<label for="event-calendar">${osT("Calendar")}</label><select id="event-calendar" class="form-input"></select>`;
       const sel = group.querySelector("select");
       this.config.editable.forEach((c) => { const o = document.createElement("option"); o.value = c.name; o.textContent = c.name; sel.appendChild(o); });
       form.appendChild(group);
@@ -312,17 +314,17 @@ Module.register("MMM-OpenSky-EventEditor", {
     // All-day switch
     const allDayRow = document.createElement("label");
     allDayRow.className = "event-allday-row";
-    allDayRow.innerHTML = `<span>All day</span><input type="checkbox" id="event-all-day" class="event-switch">`;
+    allDayRow.innerHTML = `<span>${osT("All day")}</span><input type="checkbox" id="event-all-day" class="event-switch">`;
     const allDay = allDayRow.querySelector("input");
     allDay.checked = !!event.allDay;
     form.appendChild(allDayRow);
 
     const grid = document.createElement("div");
     grid.className = "event-datetime-grid";
-    grid.appendChild(this.createFormGroup("Start Date", "date", "event-start-date", this.formatDate(event.startDate), true));
-    grid.appendChild(this.createFormGroup("Start Time", "time", "event-start-time", this.formatTime(event.startDate), true));
-    grid.appendChild(this.createFormGroup("End Date", "date", "event-end-date", this.formatDate(event.endDate), true));
-    grid.appendChild(this.createFormGroup("End Time", "time", "event-end-time", this.formatTime(event.endDate), true));
+    grid.appendChild(this.createFormGroup(osT("Start Date"), "date", "event-start-date", this.formatDate(event.startDate), true));
+    grid.appendChild(this.createFormGroup(osT("Start Time"), "time", "event-start-time", this.formatTime(event.startDate), true));
+    grid.appendChild(this.createFormGroup(osT("End Date"), "date", "event-end-date", this.formatDate(event.endDate), true));
+    grid.appendChild(this.createFormGroup(osT("End Time"), "time", "event-end-time", this.formatTime(event.endDate), true));
     form.appendChild(grid);
 
     const syncAllDay = () => grid.classList.toggle("all-day", allDay.checked);
@@ -336,12 +338,12 @@ Module.register("MMM-OpenSky-EventEditor", {
 
     const descGroup = document.createElement("div");
     descGroup.className = "form-group";
-    descGroup.innerHTML = `<label for="event-description">Description</label>`;
+    descGroup.innerHTML = `<label for="event-description">${osT("Description")}</label>`;
     const desc = document.createElement("textarea");
     desc.id = "event-description";
     desc.className = "form-textarea";
     desc.rows = 3;
-    desc.placeholder = "Add details...";
+    desc.placeholder = osT("Add details...");
     desc.value = event.description || "";
     descGroup.appendChild(desc);
     form.appendChild(descGroup);
@@ -396,7 +398,7 @@ Module.register("MMM-OpenSky-EventEditor", {
   request(op, calendar, ref, data) {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     return new Promise((resolve) => {
-      const timer = setTimeout(() => { this.pending.delete(id); resolve({ ok: false, error: "The calendar didn't answer. Try again in a minute." }); }, 30000);
+      const timer = setTimeout(() => { this.pending.delete(id); resolve({ ok: false, error: osT("The calendar didn't answer. Try again in a minute.") }); }, 30000);
       this.pending.set(id, (r) => { clearTimeout(timer); resolve(r); });
       this.sendSocketNotification("OS_EV", { id, op, calendar, ref, data });
     });
@@ -420,23 +422,23 @@ Module.register("MMM-OpenSky-EventEditor", {
       if ((this.editableCal(calendar) || {}).type !== "local") this.sendNotification("OPENSKY_CALENDAR_REFETCH", { name: calendar });
     } else {
       if (button) { button.textContent = label; button.disabled = false; }
-      this.showNotification(r.error || "Something went wrong", "error");
+      this.showNotification(r.error || osT("Something went wrong"), "error");
     }
   },
 
   saveEvent(button) {
     const formData = this.getFormData();
-    if (formData) this.send("update", this.currentEvent.calendarName, this.originalRef(), formData, button, "Saving…", "Event updated");
+    if (formData) this.send("update", this.currentEvent.calendarName, this.originalRef(), formData, button, osT("Saving…"), osT("Event updated"));
   },
 
   createEvent(button) {
     const formData = this.getFormData();
     const calendar = document.getElementById("event-calendar")?.value || (this.config.editable[0] || {}).name;
-    if (formData) this.send("create", calendar, null, formData, button, "Adding…", "Event added");
+    if (formData) this.send("create", calendar, null, formData, button, osT("Adding…"), osT("Event added"));
   },
 
   deleteEvent(button) {
-    this.send("delete", this.currentEvent.calendarName, this.originalRef(), null, button, "Deleting…", "Event deleted");
+    this.send("delete", this.currentEvent.calendarName, this.originalRef(), null, button, osT("Deleting…"), osT("Event deleted"));
   },
 
   getFormData() {
@@ -447,20 +449,20 @@ Module.register("MMM-OpenSky-EventEditor", {
     const endDate = val("event-end-date");
     const description = val("event-description");
 
-    if (!title) { this.showNotification("Please add a title", "error"); return null; }
-    if (!startDate || !endDate) { this.showNotification("Please pick a start and end date", "error"); return null; }
+    if (!title) { this.showNotification(osT("Please add a title"), "error"); return null; }
+    if (!startDate || !endDate) { this.showNotification(osT("Please pick a start and end date"), "error"); return null; }
 
     if (allDay) {
-      if (endDate < startDate) { this.showNotification("End date must be on or after the start date", "error"); return null; }
+      if (endDate < startDate) { this.showNotification(osT("End date must be on or after the start date"), "error"); return null; }
       return { title, allDay: true, startDate, endDate, description };
     }
 
     const startTime = val("event-start-time");
     const endTime = val("event-end-time");
-    if (!startTime || !endTime) { this.showNotification("Please pick a start and end time", "error"); return null; }
+    if (!startTime || !endTime) { this.showNotification(osT("Please pick a start and end time"), "error"); return null; }
     const start = new Date(`${startDate}T${startTime}`);
     const end = new Date(`${endDate}T${endTime}`);
-    if (end <= start) { this.showNotification("End time must be after start time", "error"); return null; }
+    if (end <= start) { this.showNotification(osT("End time must be after start time"), "error"); return null; }
     return { title, allDay: false, startDate: start.toISOString(), endDate: end.toISOString(), description };
   },
 
@@ -479,9 +481,9 @@ Module.register("MMM-OpenSky-EventEditor", {
   /* ---------------- formatting ---------------- */
 
   formatEventDateTime(event) {
-    if (!event.startDate) return "No date";
+    if (!event.startDate) return osT("No date");
     const start = new Date(Number(event.startDate));
-    if (isNaN(start)) return "No date";
+    if (isNaN(start)) return osT("No date");
     // All-day events end at midnight of the following day; show the last day instead
     let end = event.endDate ? new Date(Number(event.endDate)) : null;
     if (end && event.allDay) end = new Date(end.getTime() - 1);
@@ -492,7 +494,8 @@ Module.register("MMM-OpenSky-EventEditor", {
     const sameDay = end && start.toDateString() === end.toDateString();
 
     if (event.allDay) {
-      return (!end || sameDay) ? `${day(start)} • All day` : `${shortDay(start)} – ${shortDay(end)} • All day`;
+      return (!end || sameDay) ? `${day(start)} • ${osT("All day")}` : `${shortDay(start)} – ${shortDay(end)} • ${osT("All day")}`;
+
     }
     if (!end || end.getTime() === start.getTime()) return `${day(start)} • ${time(start)}`;
     if (sameDay) return `${day(start)} • ${time(start)} – ${time(end)}`;

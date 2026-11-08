@@ -25,7 +25,7 @@ Module.register("MMM-OpenSky-Sidebar", {
   },
 
   getStyles() { return ["MMM-OpenSky-Sidebar.css"]; },
-  getScripts() { return ["modules/opensky-lib/client/opensky-client.js"]; },
+  getScripts() { return ["modules/opensky-lib/client/i18n.js", "modules/opensky-lib/client/opensky-client.js"]; },
 
   start() {
     this.activeIndex = 0;        // MMM-pages starts on its first page
@@ -125,8 +125,9 @@ Module.register("MMM-OpenSky-Sidebar", {
     const spacer = document.createElement("div");
     spacer.className = "os-side-spacer";
     col.appendChild(spacer);
-    col.appendChild(this.tile("sleep", this.icon("sleep"), "Sleep", () => this.sleep(), true));
-    if (this.config.showSettings) col.appendChild(this.tile("settings", this.icon("settings"), "Settings", () => this.sendNotification("OPENSKY_SETTINGS_OPEN"), true));
+    col.appendChild(this.tile("sleep", this.icon("sleep"), osT("Sleep"), () => this.sleep(), true));
+    if (this.config.showSettings) col.appendChild(this.tile("settings", this.icon("settings"), osT("Settings"),
+ () => this.sendNotification("OPENSKY_SETTINGS_OPEN"), true));
     this.col = col;
     this.syncActive();
     return wrap;

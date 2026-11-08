@@ -10,7 +10,9 @@ Module.register("MMM-OpenSky-WordGame", {
 
   ROWS: [["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"], ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
     ["enter", "z", "x", "c", "v", "b", "n", "m", "back"]],
-  PRAISE: ["Genius!", "Magnificent!", "Impressive!", "Splendid!", "Great!", "Phew!"],
+  PRAISE: () => [osT("Genius!"), osT("Magnificent!"), osT("Impressive!"), osT("Splendid!"), osT("Great!"), osT("Phew!")],
+
+  getScripts() { return ["modules/opensky-lib/client/i18n.js"]; },
 
   getStyles() { return ["MMM-OpenSky-WordGame.css"]; },
 
@@ -68,12 +70,12 @@ Module.register("MMM-OpenSky-WordGame", {
     if (!s || s.status !== "playing" || this.busy || this.revealRow >= 0) return;
     if (k === "back") this.typed = this.typed.slice(0, -1);
     else if (k === "enter") {
-      if (this.typed.length < 5) { this.toast("Not enough letters"); this.shakeCurrent(); return; }
+      if (this.typed.length < 5) { this.toast(osT("Not enough letters")); this.shakeCurrent(); return; }
       this.busy = true;                                    // blocks a double-tapped Enter
       this.sendSocketNotification("OS_WG_GUESS", { word: this.typed, date: s.date });
       // If no answer comes back (connection blip), unlock instead of freezing the keyboard
       clearTimeout(this._busyTimer);
-      this._busyTimer = setTimeout(() => { if (this.busy) { this.busy = false; this.toast("Couldn't check that — try again"); this.sendSocketNotification("OS_WG_SYNC"); } }, 8000);
+      this._busyTimer = setTimeout(() => { if (this.busy) { this.busy = false; this.toast(osT("Couldn't check that — try again")); this.sendSocketNotification("OS_WG_SYNC"); } }, 8000);
       return;
     } else if (this.typed.length < 5) this.typed += k;
     this.renderBoard();
@@ -94,13 +96,13 @@ Module.register("MMM-OpenSky-WordGame", {
   render() {
     const r = this.root;
     if (!r) return;
-    if (!this.state) { r.innerHTML = `<div class="wg-loading">Loading today's puzzle…</div>`; return; }
+    if (!this.state) { r.innerHTML = `<div class="wg-loading">${osT("Loading today's puzzle…")}</div>`; return; }
     const s = this.state;
     const day = new Date(s.date + "T12:00:00").toLocaleDateString(config.locale || "en-US", { weekday: "long", month: "long", day: "numeric" });
     r.innerHTML = `
       <div class="wg-head">
-        <div class="wg-title"><span class="wg-logo"><i class="g">W</i></span>Word Game</div>
-        <div class="wg-sub">${s.number != null ? `#${s.number} · ` : ""}${day} · today's family puzzle${s.backup ? " (NYT's word unavailable — OpenSky's word)" : ""}</div>
+        <div class="wg-title"><span class="wg-logo"><i class="g">W</i></span>${osT("Word Game")}</div>
+        <div class="wg-sub">${s.number != null ? `#${s.number} · ` : ""}${day} · ${osT("today's family puzzle")}${s.backup ? " " + osT("(NYT's word unavailable — OpenSky's word)") : ""}</div>
       </div>
       <div class="wg-body">
         <div class="wg-play">
@@ -156,7 +158,7 @@ Module.register("MMM-OpenSky-WordGame", {
     if (!k || !this.state) return;
     const st = this.keyStates();
     k.innerHTML = this.ROWS.map((row) => `<div class="wg-krow">${row.map((key) => {
-      const label = key === "enter" ? "Enter" : key === "back" ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>` : key;
+      const label = key === "enter" ? osT("Enter") : key === "back" ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>` : key;
       return `<button class="wg-key ${key.length > 1 ? "wide" : ""} ${st[key] || ""}" data-k="${key}">${label}</button>`;
     }).join("")}</div>`).join("");
     k.querySelectorAll(".wg-key").forEach((b) => { b.onclick = () => this.press(b.dataset.k); });
@@ -170,20 +172,21 @@ Module.register("MMM-OpenSky-WordGame", {
     const winPct = st.played ? Math.round((st.won / st.played) * 100) : 0;
     side.innerHTML = `
       <div class="wg-card wg-result ${done ? s.status : "playing"}">
-        ${done && s.status === "won" ? `<div class="wg-big">${this.PRAISE[s.guesses.length - 1]}</div><div class="wg-small">Solved in ${s.guesses.length} ${s.guesses.length === 1 ? "guess" : "guesses"}</div>`
-        : done ? `<div class="wg-big">So close!</div><div class="wg-small">The word was <b class="wg-answer">${(s.answer || "").toUpperCase()}</b></div>`
-        : `<div class="wg-big">${s.guesses.length ? `Guess ${s.guesses.length + 1} of 6` : "Today's puzzle"}</div><div class="wg-small">${s.guesses.length ? "Keep going — everyone can chip in" : "Tap the letters or use the keyboard"}</div>`}
-        ${done ? `<div class="wg-next">Next puzzle in <b class="wg-countdown"></b></div>` : ""}
+        ${done && s.status === "won" ? `<div class="wg-big">${this.PRAISE()[s.guesses.length - 1]}</div><div class="wg-small">${s.guesses.length === 1 ? osT("Solved in 1 guess") : osT("Solved in {n} guesses", { n: s.guesses.length })}</div>`
+        : done ? `<div class="wg-big">${osT("So close!")}</div><div class="wg-small">${osT("The word was {word}", { word: `<b class="wg-answer">${(s.answer || "").toUpperCase()}</b>` })}</div>`
+        : `<div class="wg-big">${s.guesses.length ? osT("Guess {n} of 6", { n: s.guesses.length + 1 }) : osT("Today's puzzle")}</div><div class="wg-small">${s.guesses.length ? osT("Keep going — everyone can chip in") : osT("Tap the letters or use the keyboard")}</div>`}
+        ${done ? `<div class="wg-next">${osT("Next puzzle in {time}", { time: `<b class="wg-countdown"></b>` })}</div>` : ""}
       </div>
       <div class="wg-card">
-        <div class="wg-card-title">Family stats</div>
+        <div class="wg-card-title">${osT("Family stats")}</div>
         <div class="wg-nums">
-          <div><b>${st.played}</b><span>Played</span></div>
-          <div><b>${winPct}</b><span>Win %</span></div>
-          <div><b>${st.streak}</b><span>Streak</span></div>
-          <div><b>${st.maxStreak}</b><span>Best</span></div>
+          <div><b>${st.played}</b><span>${osT("Played")}</span></div>
+          <div><b>${winPct}</b><span>${osT("Win %")}</span></div>
+          <div><b>${st.streak}</b><span>${osT("Streak")}</span></div>
+          <div><b>${st.maxStreak}</b><span>${osT("Best")}</span></div>
         </div>
-        <div class="wg-card-title">Guess distribution</div>
+        <div class="wg-card-title">${osT("Guess distribution")}</div>
+
         <div class="wg-dist">${st.dist.map((n, i) => `<div class="wg-drow"><span>${i + 1}</span><div class="wg-bar ${done && s.status === "won" && s.guesses.length === i + 1 ? "today" : ""}" style="width:${Math.max(8, (n / maxD) * 100)}%">${n}</div></div>`).join("")}</div>
       </div>`;
     this.tickCountdown();

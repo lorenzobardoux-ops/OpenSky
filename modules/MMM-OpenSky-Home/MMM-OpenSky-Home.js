@@ -27,7 +27,7 @@ Module.register("MMM-OpenSky-Home", {
   },
 
   getStyles() { return ["modules/opensky-lib/client/list-columns.css", "MMM-OpenSky-Home.css"]; },
-  getScripts() { return ["modules/opensky-lib/client/opensky-client.js", "modules/opensky-lib/client/pickup.js"]; },
+  getScripts() { return ["modules/opensky-lib/client/i18n.js", "modules/opensky-lib/client/opensky-client.js", "modules/opensky-lib/client/pickup.js"]; },
 
   start() {
     this.pools = new Map();      // sender identifier → events
@@ -107,14 +107,14 @@ Module.register("MMM-OpenSky-Home", {
     root.innerHTML = `
       <section class="hd-card hd-calendar">
         <header class="hd-card-head">
-          <span class="hd-card-label">${this.icon("calendar")} Calendar</span>
+          <span class="hd-card-label">${this.icon("calendar")} ${osT("Calendar")}</span>
           <span class="hd-week-range"></span>
           <button class="hd-cal-alert" hidden></button>
           <span class="hd-nav">
-            ${this.config.canAddEvents ? `<button class="hd-nav-btn hd-add">${this.icon("plus")} Add Event</button>` : ""}
-            <button class="hd-nav-btn hd-prev" aria-label="Previous week">${this.icon("left")}</button>
-            <button class="hd-nav-btn hd-today">Today</button>
-            <button class="hd-nav-btn hd-next" aria-label="Next week">${this.icon("right")}</button>
+            ${this.config.canAddEvents ? `<button class="hd-nav-btn hd-add">${this.icon("plus")} ${osT("Add Event")}</button>` : ""}
+            <button class="hd-nav-btn hd-prev" aria-label="${osT("Previous week")}">${this.icon("left")}</button>
+            <button class="hd-nav-btn hd-today">${osT("Today")}</button>
+            <button class="hd-nav-btn hd-next" aria-label="${osT("Next week")}">${this.icon("right")}</button>
           </span>
         </header>
         <div class="hd-week"></div>
@@ -122,13 +122,13 @@ Module.register("MMM-OpenSky-Home", {
       <div class="hd-right">
         <section class="hd-card hd-lists" hidden>
           <header class="hd-card-head">
-            <span class="hd-card-label">${this.icon("list")} Lists</span>
-            ${Number.isInteger(this.config.listsPage) ? `<button class="hd-see-all">See all ${this.icon("right")}</button>` : ""}
+            <span class="hd-card-label">${this.icon("list")} ${osT("Lists")}</span>
+            ${Number.isInteger(this.config.listsPage) ? `<button class="hd-see-all">${osT("See all")} ${this.icon("right")}</button>` : ""}
           </header>
           <div class="hd-list-columns"></div>
         </section>
-        ${this.photosOn() ? `<section class="hd-photo" aria-label="Family photos">
-          <div class="hd-photo-empty">${this.icon("image")}<span class="hd-photo-msg">Photos will appear here</span></div>
+        ${this.photosOn() ? `<section class="hd-photo" aria-label="${osT("Family photos")}">
+          <div class="hd-photo-empty">${this.icon("image")}<span class="hd-photo-msg">${osT("Photos will appear here")}</span></div>
         </section>` : ""}
       </div>`;
     root.querySelector(".hd-prev").onclick = () => { this.weekOffset--; this.renderCalendar(); };
@@ -254,8 +254,8 @@ Module.register("MMM-OpenSky-Home", {
     const now = Date.now(), bad = Object.entries(this.calProblems || {}).filter(([, p]) => now - p.since >= this.config.calendarAlertAfter);
     el.hidden = !bad.length;
     if (!bad.length) return;
-    el.textContent = bad.length === 1 ? `${bad[0][0]} isn't loading` : `${bad.length} calendars aren't loading`;
-    el.onclick = () => window.OpenSkyToast(`${bad.map(([n, p]) => `${n}: ${p.message}`).join(" · ")} — fix it in Settings → Set up from your phone → Calendars`, "error");
+    el.textContent = bad.length === 1 ? osT("{name} isn't loading", { name: bad[0][0] }) : osT("{n} calendars aren't loading", { n: bad.length });
+    el.onclick = () => window.OpenSkyToast(osT("{problems} — fix it in Settings → Set up from your phone → Calendars", { problems: bad.map(([n, p]) => `${n}: ${p.message}`).join(" · ") }), "error");
   },
 
   renderCalendar() {
@@ -292,7 +292,7 @@ Module.register("MMM-OpenSky-Home", {
         <span class="hd-day-num">${day.getDate()}</span>
         <span class="hd-day-wx">${weather ? `${this.weatherIcon(weather.id)}<span>${weather.high}°</span>` : ""}</span>
       </div>
-      <div class="hd-day-count"><span>${events.length ? `${events.length} event${events.length > 1 ? "s" : ""}` : ""}</span>${this.pickupIcons(day)}</div>
+      <div class="hd-day-count"><span>${events.length ? (events.length > 1 ? osT("{n} events", { n: events.length }) : osT("1 event")) : ""}</span>${this.pickupIcons(day)}</div>
       <div class="hd-day-events"></div>`;
     const list = tile.querySelector(".hd-day-events");
     const max = this.config.maxEventsPerDay;
@@ -301,7 +301,7 @@ Module.register("MMM-OpenSky-Home", {
     if (events.length > shown.length) {
       const more = document.createElement("button");
       more.className = "hd-more";
-      more.textContent = `+${events.length - shown.length} more`;
+      more.textContent = osT("+{n} more", { n: events.length - shown.length });
       list.appendChild(more);
     }
     tile.onclick = (e) => { if (!e.target.closest(".hd-event")) this.sendNotification("CALENDAR_DAY_CLICKED", { date: day.getTime(), events }); };
@@ -320,13 +320,13 @@ Module.register("MMM-OpenSky-Home", {
   },
 
   when(ev, day) {
-    if (ev.allDay) return "All day";
+    if (ev.allDay) return osT("All day");
     const start = new Date(ev.startDate), end = new Date(ev.endDate);
     const twelve = !(typeof config !== "undefined" && config.timeFormat === 24);
     const t = (d) => d.toLocaleTimeString(this.locale(), { hour: "numeric", minute: "2-digit", hour12: twelve }).replace(/:00(?= ?[AP]M)/, "");
     const onDay = (d) => d.toDateString() === day.toDateString();
-    if (!onDay(start) && !onDay(end)) return "All day";
-    if (!onDay(start)) return `Until ${t(end)}`;
+    if (!onDay(start) && !onDay(end)) return osT("All day");
+    if (!onDay(start)) return osT("Until {time}", { time: t(end) });
     if (end.getTime() === start.getTime()) return t(start);
     return onDay(end) ? `${t(start)} – ${t(end)}` : `${t(start)} →`;
   },
@@ -337,8 +337,8 @@ Module.register("MMM-OpenSky-Home", {
     const last = new Date(to); last.setDate(last.getDate() - 1);
     const f = (d) => d.toLocaleDateString(this.locale(), { month: "short", day: "numeric" });
     tile.innerHTML = `
-      <div class="hd-day-head"><span class="hd-day-name hd-nw-title">Next Week</span></div>
-      <div class="hd-day-count">${f(from)} – ${f(last)}${events.length ? ` · ${events.length} event${events.length === 1 ? "" : "s"}` : ""}</div>
+      <div class="hd-day-head"><span class="hd-day-name hd-nw-title">${osT("Next Week")}</span></div>
+      <div class="hd-day-count">${f(from)} – ${f(last)}${events.length ? ` · ${events.length === 1 ? osT("1 event") : osT("{n} events", { n: events.length })}` : ""}</div>
       <div class="hd-nw-list"></div>`;
     const list = tile.querySelector(".hd-nw-list");
     events.slice(0, 5).forEach((ev) => {
@@ -353,7 +353,7 @@ Module.register("MMM-OpenSky-Home", {
     if (events.length > 5) {
       const more = document.createElement("div");
       more.className = "hd-nw-more";
-      more.textContent = `+${events.length - 5} more`;
+      more.textContent = osT("+{n} more", { n: events.length - 5 });
       list.appendChild(more);
     }
     tile.onclick = () => { this.weekOffset++; this.renderCalendar(); };
@@ -411,14 +411,15 @@ Module.register("MMM-OpenSky-Home", {
     const rules = this.config.pickup && window.OpenSkyPickup ? window.OpenSkyPickup.collectionsOn(day, this.config.pickup) : {};
     // both can be on: the calendar adds to the trash-day rules
     const c = fromCal ? { trash: !!(rules.trash || fromCal.trash), recycling: !!(rules.recycling || fromCal.recycling), yard: !!(rules.yard || fromCal.yard), expected: !!rules.expected && !fromCal.yard, moved: rules.moved || null } : rules;
-    const why = c.moved ? ` (moved a day for ${c.moved})` : "";
+    const why = c.moved ? " " + osT("(moved a day for {holiday})", { holiday: c.moved }) : "";
     // recycling gets its own icon unless it always comes with the trash (weekly, in the trash-day rules)
     const weeklyRecycling = !fromCal && !(this.config.pickup && this.config.pickup.recycling && this.config.pickup.recycling.every === 2);
     const svg = (paths) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
     let html = "";
-    if (c.trash) html += `<span class="hd-pickup hd-pickup-trash" title="${weeklyRecycling ? "Trash & recycling" : "Trash"}${why}">${svg(`<path d="M4 7h16M10 3.5h4M6 7l1 13a1.5 1.5 0 0 0 1.5 1.4h7A1.5 1.5 0 0 0 17 20l1-13"/><path d="M10 11v6M14 11v6"/>`)}</span>`;
-    if (c.recycling && !weeklyRecycling) html += `<span class="hd-pickup hd-pickup-recycle" title="Recycling${why}">${svg(`<path d="M7 19H4.8a1.8 1.8 0 0 1-1.6-2.7L5.4 12.5"/><path d="M11 19h8.2a1.8 1.8 0 0 0 1.6-2.7l-1.2-2.1"/><path d="M14 16l-3 3 3 3"/><path d="M8.3 7.8 10.5 4a1.8 1.8 0 0 1 3.1 0l1.2 2.1"/><path d="M13.4 6.5l4.2-.9.9 4.2"/><path d="M8.6 12.3 5.4 12.5 4.2 9.3"/>`)}</span>`;
-    if (c.yard) html += `<span class="hd-pickup hd-pickup-yard${c.expected ? " hd-pickup-expected" : ""}" title="Yard waste${c.expected ? " (expected — this year's schedule isn't published yet)" : why}">${svg(`<path d="M5 19c0-8 5-14 15-15 0 10-6 15-13 15"/><path d="M5 19c3-4 6-7 10-10"/>`)}</span>`;
+    if (c.trash) html += `<span class="hd-pickup hd-pickup-trash" title="${weeklyRecycling ? osT("Trash & recycling") : osT("Trash")}${why}">${svg(`<path d="M4 7h16M10 3.5h4M6 7l1 13a1.5 1.5 0 0 0 1.5 1.4h7A1.5 1.5 0 0 0 17 20l1-13"/><path d="M10 11v6M14 11v6"/>`)}</span>`;
+    if (c.recycling && !weeklyRecycling) html += `<span class="hd-pickup hd-pickup-recycle" title="${osT("Recycling")}${why}">${svg(`<path d="M7 19H4.8a1.8 1.8 0 0 1-1.6-2.7L5.4 12.5"/><path d="M11 19h8.2a1.8 1.8 0 0 0 1.6-2.7l-1.2-2.1"/><path d="M14 16l-3 3 3 3"/><path d="M8.3 7.8 10.5 4a1.8 1.8 0 0 1 3.1 0l1.2 2.1"/><path d="M13.4 6.5l4.2-.9.9 4.2"/><path d="M8.6 12.3 5.4 12.5 4.2 9.3"/>`)}</span>`;
+    if (c.yard) html += `<span class="hd-pickup hd-pickup-yard${c.expected ? " hd-pickup-expected" : ""}" title="${osT("Yard waste")}${c.expected ? " " + osT("(expected — this year's schedule isn't published yet)") : why}"
+>${svg(`<path d="M5 19c0-8 5-14 15-15 0 10-6 15-13 15"/><path d="M5 19c3-4 6-7 10-10"/>`)}</span>`;
     return html ? `<span class="hd-pickups">${html}</span>` : "";
   },
 

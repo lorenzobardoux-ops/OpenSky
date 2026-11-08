@@ -5,6 +5,7 @@
  */
 const NodeHelper = require("node_helper");
 const path = require("path");
+const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.js"));   // texts in opensky.json's language
 const lists = require(path.join(global.root_path, "modules", "opensky-lib", "lists.js"));
 
 module.exports = NodeHelper.create({
@@ -38,14 +39,14 @@ module.exports = NodeHelper.create({
 
   async operate({ op, listId, item, text }) {
     const list = this.lists.find((l) => l.name === listId);
-    if (!list) throw new Error("That list isn't on this screen any more");
+    if (!list) throw new Error(osT("That list isn't on this screen any more"));
     const provider = lists.provider(list);
     if (op === "add") return provider.add(list, text);
-    if (!item || !item.id) throw new Error("Which item?");
+    if (!item || !item.id) throw new Error(osT("Which item?"));
     if (op === "check") return provider.check(list, item);
     if (op === "edit") return provider.edit(list, item, text);
     if (op === "remove") return provider.remove(list, item);
-    throw new Error("Unknown change");
+    throw new Error(osT("Unknown change"));
   },
 
   async refresh(force) {

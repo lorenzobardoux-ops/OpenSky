@@ -10,7 +10,7 @@ Module.register("MMM-OpenSky-Calendars", {
     days: 400             // how far ahead (and back) to keep events
   },
 
-  getScripts() { return ["modules/opensky-lib/client/opensky-client.js"]; },
+  getScripts() { return ["modules/opensky-lib/client/i18n.js", "modules/opensky-lib/client/opensky-client.js"]; },
 
   start() {
     this.events = new Map();   // source name → events

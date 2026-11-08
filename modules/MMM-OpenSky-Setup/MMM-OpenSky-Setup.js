@@ -6,7 +6,7 @@
  */
 Module.register("MMM-OpenSky-Setup", {
   getStyles() { return ["MMM-OpenSky-Setup.css"]; },
-  getScripts() { return ["modules/opensky-lib/client/vendor/qrcode.js"]; },
+  getScripts() { return ["modules/opensky-lib/client/i18n.js", "modules/opensky-lib/client/vendor/qrcode.js"]; },
 
   start() {
     this.mode = null;          // null | "welcome" | "pair"
@@ -30,7 +30,9 @@ Module.register("MMM-OpenSky-Setup", {
     else if (n === "OS_SETUP_STOPPED") {
       if (this.mode !== "pair") return;
       const finished = /finished/.test(p.reason || "");
-      this.status = finished ? "done" : /busy|start/i.test(p.reason || "") ? "error" : "closed";
+      // (failed: the reason is in the screen's language, so it isn't matched as text)
+      this.status = finished ? "done" : (p.failed || /busy|start/i.test(p.reason || "")) ? "error" : "closed";
+
       this.errorText = p.reason;
       this.renderStatus();
       if (finished) setTimeout(() => this.close(false), 4000);
@@ -67,13 +69,13 @@ Module.register("MMM-OpenSky-Setup", {
         <div class="osu-overlay">
           <div class="osu-card osu-welcome">
             <img class="osu-brand" src="modules/opensky-lib/client/assets/opensky-icon.png" alt="">
-            <h2>Welcome to OpenSky!</h2>
-            <p>Add your calendars, lists, photos and more from your phone — it takes a couple of minutes.</p>
+            <h2>${osT("Welcome to OpenSky!")}</h2>
+            <p>${osT("Add your calendars, lists, photos and more from your phone — it takes a couple of minutes.")}</p>
             <div class="osu-actions">
-              <button class="osu-btn osu-later">Not now</button>
-              <button class="osu-btn osu-primary osu-go">Set up on my phone</button>
+              <button class="osu-btn osu-later">${osT("Not now")}</button>
+              <button class="osu-btn osu-primary osu-go">${osT("Set up on my phone")}</button>
             </div>
-            <div class="osu-foot">You can always find this later in Settings.</div>
+            <div class="osu-foot">${osT("You can always find this later in Settings.")}</div>
           </div>
         </div>`;
       h.querySelector(".osu-go").onclick = () => this.openPair();
@@ -84,24 +86,24 @@ Module.register("MMM-OpenSky-Setup", {
     h.innerHTML = `
       <div class="osu-overlay">
         <div class="osu-card osu-pair">
-          <button class="osu-x" aria-label="Close">×</button>
+          <button class="osu-x" aria-label="${osT("Close")}">×</button>
           <div class="osu-left">
             <div class="osu-qr">${info ? this.qr(info.urls[0]) : `<div class="osu-qr-wait">…</div>`}</div>
-            <div class="osu-scan">Scan with your phone's camera</div>
+            <div class="osu-scan">${osT("Scan with your phone's camera")}</div>
           </div>
           <div class="osu-right">
-            <h2>Set up from your phone</h2>
+            <h2>${osT("Set up from your phone")}</h2>
             <ol class="osu-steps">
-              <li>Join the same Wi-Fi as this screen.</li>
-              <li>Scan the code, or open <b class="osu-url"></b></li>
-              <li>Enter this pairing code:</li>
+              <li>${osT("Join the same Wi-Fi as this screen.")}</li>
+              <li>${osT("Scan the code, or open {address}", { address: `<b class="osu-url"></b>` })}</li>
+              <li>${osT("Enter this pairing code:")}</li>
             </ol>
             <div class="osu-code">${info ? [...info.code].map((d, i) => `<span>${d}</span>${i === 2 ? `<i></i>` : ""}`).join("") : ""}</div>
             <div class="osu-expiry"></div>
             <div class="osu-status"></div>
             <div class="osu-actions">
-              <button class="osu-btn osu-newcode">New code</button>
-              <button class="osu-btn osu-close">Close</button>
+              <button class="osu-btn osu-newcode">${osT("New code")}</button>
+              <button class="osu-btn osu-close">${osT("Close")}</button>
             </div>
           </div>
         </div>
@@ -120,19 +122,19 @@ Module.register("MMM-OpenSky-Setup", {
       q.addData(text);
       q.make();
       return q.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
-    } catch (e) { return `<div class="osu-qr-wait">QR unavailable</div>`; }
+    } catch (e) { return `<div class="osu-qr-wait">${osT("QR unavailable")}</div>`; }
   },
 
   renderStatus() {
     const el = this.host && this.host.querySelector(".osu-status");
     if (!el) return;
     const text = {
-      waiting: "Waiting for your phone…",
-      paired: "Phone connected — carry on there",
-      saved: "Saved! Tap Done on your phone when you're finished",
-      done: "All done — OpenSky is restarting with your settings",
-      closed: "Setup has closed",
-      error: `Couldn't start phone setup (${this.errorText || "error"})`
+      waiting: osT("Waiting for your phone…"),
+      paired: osT("Phone connected — carry on there"),
+      saved: osT("Saved! Tap Done on your phone when you're finished"),
+      done: osT("All done — OpenSky is restarting with your settings"),
+      closed: osT("Setup has closed"),
+      error: osT("Couldn't start phone setup ({error})", { error: this.errorText || osT("error") })
     }[this.status];
     el.className = `osu-status is-${this.status}`;
     el.innerHTML = `<i></i><span></span>`;
@@ -143,6 +145,7 @@ Module.register("MMM-OpenSky-Setup", {
     const el = this.host && this.host.querySelector(".osu-expiry");
     if (!el || !this.info) return;
     const s = Math.max(0, Math.round((this.info.expiresAt - Date.now()) / 1000));
-    el.textContent = this.status !== "waiting" ? "" : s > 0 ? `The code works for ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "This code has expired — tap New code";
+    el.textContent = this.status !== "waiting" ? "" : s > 0 ? osT("The code works for {time}", { time: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` }) : osT("This code has expired — tap New code");
+
   }
 });

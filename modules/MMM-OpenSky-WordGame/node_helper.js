@@ -12,6 +12,7 @@
 const NodeHelper = require("node_helper");
 const fs = require("fs");
 const path = require("path");
+const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.js"));   // texts in opensky.json's language
 
 const WORDS = path.join(__dirname, "words");
 const SETTINGS_DIR = path.dirname(process.env.OPENSKY_SETTINGS || path.join(global.root_path || process.cwd(), "config", "opensky.json"));
@@ -153,12 +154,12 @@ module.exports = NodeHelper.create({
     // a guess typed just before midnight must not land on the next day's puzzle
     if (payload && payload.date && payload.date !== t.date) {
       this.sendSocketNotification("OS_WG_STATE", this.view(s, p));
-      return this.sendSocketNotification("OS_WG_ERROR", { message: "A new puzzle just started" });
+      return this.sendSocketNotification("OS_WG_ERROR", { message: osT("A new puzzle just started") });
     }
     if (t.status !== "playing") return this.sendSocketNotification("OS_WG_STATE", this.view(s, p));
-    if (!/^[a-z]{5}$/.test(word)) return this.sendSocketNotification("OS_WG_ERROR", { message: "Not enough letters" });
-    if (!this.allowed.has(word) && word !== p.answer) return this.sendSocketNotification("OS_WG_ERROR", { message: "Not in the word list" });
-    if (t.guesses.some((g) => g.word === word)) return this.sendSocketNotification("OS_WG_ERROR", { message: "Already tried that one" });
+    if (!/^[a-z]{5}$/.test(word)) return this.sendSocketNotification("OS_WG_ERROR", { message: osT("Not enough letters") });
+    if (!this.allowed.has(word) && word !== p.answer) return this.sendSocketNotification("OS_WG_ERROR", { message: osT("Not in the word list") });
+    if (t.guesses.some((g) => g.word === word)) return this.sendSocketNotification("OS_WG_ERROR", { message: osT("Already tried that one") });
     const pattern = this.score(word, p.answer);
     t.guesses.push({ word, pattern, at: new Date().toISOString() });
     if (pattern === "ggggg" || t.guesses.length >= MAX_GUESSES) {

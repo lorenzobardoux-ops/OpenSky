@@ -39,16 +39,26 @@ function accentOf(v) {
 
 const { file: settingsFile, dir: settingsDir, settings: s } = readSettings();
 const locale = s.locale || {};
+// texts this file puts on the screen, in opensky.json's language (lib/client/i18n.js; in MagicMirror it's
+// modules/opensky-lib, in a checkout of the repo lib/)
+const i18n = (() => {
+  const root = global.root_path || path.resolve(__dirname, "..");
+  for (const p of [path.join(root, "modules", "opensky-lib", "client", "i18n.js"), path.join(root, "lib", "client", "i18n.js")]) {
+    try { return require(p); } catch (e) { /* the next place */ }
+  }
+  return { tFor: (l, text) => text };
+})();
+const osT = (text, vars) => i18n.tFor(locale.language, text, vars);
 
 // Sidebar label + icon for every page OpenSky knows (order of `pages` in opensky.json = order in the sidebar)
 const PAGE_INFO = {
-  home: { label: "Home" },
-  calendar: { label: "Calendar" },
-  lists: { label: "Lists" },
-  smarthome: { label: "Smart Home" },
-  wordgame: { label: "Word Game" },
-  timer: { label: "Timer" },
-  music: { label: "Music" }
+  home: { label: osT("Home") },
+  calendar: { label: osT("Calendar") },
+  lists: { label: osT("Lists") },
+  smarthome: { label: osT("Smart Home") },
+  wordgame: { label: osT("Word Game") },
+  timer: { label: osT("Timer") },
+  music: { label: osT("Music") }
 };
 
 // Curbside pickup: trash day + an optional city preset (lib/pickup-presets/<name>.json) + the family's own overrides
@@ -175,7 +185,7 @@ const PAGES = {
     position: "fullscreen_below",
     config: {
       quickAddButtons: quickMinutes(s.timer && s.timer.quickAddMinutes)
-        .map((m) => ({ label: m % 60 === 0 && m >= 60 ? `+${m / 60} hr` : `+${m} min`, seconds: m * 60 })),
+        .map((m) => ({ label: m % 60 === 0 && m >= 60 ? osT("+{n} hr", { n: m / 60 }) : osT("+{n} min", { n: m }), seconds: m * 60 })),
       alarm: { volume: (s.timer && s.timer.chimeVolume) ?? 0.6, repeatEverySeconds: 2.5, maxRingSeconds: 180 }
     }
   }],
@@ -232,7 +242,9 @@ const header = s.header || {};
 const fixed = [
   { module: "MMM-OpenSky-Settings", config: {} },
   { module: "MMM-OpenSky-Setup", config: {} },
-  ...(s.keyboard && s.keyboard.enabled === false ? [] : [{ module: "MMM-OpenSky-Keyboard", config: { layout: (s.keyboard && s.keyboard.layout) || "en" } }]),
+  ...(s.keyboard && s.keyboard.enabled === false ? [] : [{ module: "MMM-OpenSky-Keyboard", config: { layout: (s.keyboard && s.keyboard.layout) || (/^de\b/i.test(locale.language || "") ? "de" : "en")
+ } }]),
+
   ...(familyLists.length ? [{ module: "MMM-OpenSky-Lists", config: { lists: familyLists, refreshMinutes: listSettings.refreshMinutes || 2 } }] : []),
   ...(calendarSources.length ? [{ module: "MMM-OpenSky-EventEditor", config: { editable: editableCalendars, servicePort } }] : []),
   ...(calendarSources.length ? [{ module: "MMM-OpenSky-Calendars", config: { sources: calendarSources } }] : []),
@@ -240,7 +252,8 @@ const fixed = [
     module: "MMM-OpenSky-Header",
     position: "top_bar",
     config: {
-      title: familyName || "Our Family",
+      title: familyName || osT("Our Family"),
+
       time: { format12: locale.timeFormat !== 24, showSeconds: false, updateInterval: 1000 },
       weather: {
         provider: (s.weather && s.weather.provider) || "open-meteo",

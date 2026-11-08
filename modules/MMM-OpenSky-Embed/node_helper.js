@@ -7,6 +7,7 @@
  */
 const NodeHelper = require("node_helper");
 const path = require("path");
+const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.js"));   // texts in opensky.json's language
 const crypto = require("crypto");
 const { secret } = require(path.join(global.root_path, "modules", "opensky-lib", "secrets.js"));
 
@@ -32,19 +33,20 @@ module.exports = NodeHelper.create({
       if (p.url) this.publicUrls.set(key, String(p.url));
       if (this.pin(key)) return this.sendSocketNotification("OS_EMBED_LOCKED", { key });
       const url = this.url(key);
-      if (!url) return this.sendSocketNotification("OS_EMBED_ERROR", { key, message: `No web address for "${key}" yet — add embeds.${key}.url to opensky.json (or secrets.json)` });
+      if (!url) return this.sendSocketNotification("OS_EMBED_ERROR", { key, message: osT("No web address for \"{key}\" yet — add embeds.{key}.url to opensky.json (or secrets.json)", { key }) });
       return this.sendSocketNotification("OS_EMBED_OPEN", { key, url });
     }
     if (n === "OS_EMBED_UNLOCK") {
       const pin = this.pin(key), t = this.tries.get(key) || { wrong: 0, until: 0 };
-      if (!pin) return this.sendSocketNotification("OS_EMBED_DENIED", { key, error: "No PIN is set for this page (secrets.json)" });
+      if (!pin) return this.sendSocketNotification("OS_EMBED_DENIED", { key, error: osT("No PIN is set for this page (secrets.json)") });
       const now = Date.now();
       if (t.until > now) return this.sendSocketNotification("OS_EMBED_DENIED", { key, wait: Math.ceil((t.until - now) / 1000) });
       const given = Buffer.from(String(p.pin || "")), want = Buffer.from(pin);
       if (given.length === want.length && crypto.timingSafeEqual(given, want)) {
         this.tries.delete(key);
         const url = this.url(key);
-        if (!url) return this.sendSocketNotification("OS_EMBED_DENIED", { key, error: `No web address for "${key}" — add embeds.${key}.url to secrets.json` });
+        if (!url) return this.sendSocketNotification("OS_EMBED_DENIED", { key, error: osT("No web address for \"{key}\" — add embeds.{key}.url to secrets.json", { key }) });
+
         return this.sendSocketNotification("OS_EMBED_OPEN", { key, url });
       }
       t.wrong += 1;
