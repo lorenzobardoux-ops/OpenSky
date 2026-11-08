@@ -268,7 +268,10 @@ const fixed = [
         birthdays: header.birthdaysFromCalendar !== false
       },
       sports: header.sports && header.sports.team ? { league: header.sports.league || "nfl", team: header.sports.team } : null,
-      f1: header.f1 === true
+      f1: header.f1 === true,
+      // F1 start times: German time (MEZ / MESZ) on a German screen, else the Pi's own; header.f1TimeZone overrides
+      f1TimeZone: (typeof header.f1TimeZone === "string" && header.f1TimeZone) || (/^de\b/i.test(locale.language || "") ? "Europe/Berlin" : null)
+
 
     }
   },

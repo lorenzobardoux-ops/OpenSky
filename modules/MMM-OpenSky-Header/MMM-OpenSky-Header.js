@@ -429,9 +429,9 @@ Module.register("MMM-OpenSky-Header", {
   },
 
   /* ---------- Formula 1 pill ----------
-   * The next race weekend (from MMM-OpenSky-Header's node helper → lib/f1.js): its name, its next session (sprint
-   * qualifying, sprint, qualifying or the race) with its start, and a countdown in days. 30 minutes after a session's
-   * start the pill moves on to the one after it; 30 minutes after the race's start, to the next weekend. */
+   * The next race weekend (from MMM-OpenSky-Header's node helper → lib/f1.js): its name, all its sessions with their
+   * starts in German time (sprint qualifying, sprint, qualifying, race; the next one dark, finished ones faded) and a
+   * countdown in days to the next one. 30 minutes after the race's start it's the next weekend's turn. */
   F1_AFTER: 30 * 60 * 1000,
   pollF1() {
     clearTimeout(this._f1Retry);
@@ -443,44 +443,47 @@ Module.register("MMM-OpenSky-Header", {
     return this.f1.filter((r) => r.start > now.getTime() - this.F1_AFTER).sort((a, b) => a.start - b.start)[0] || null;
   },
 
-  // the weekend's next session (until 30 min after its start); a weekend without sprint has none of those
-  f1Next(race, now) {
-    return [[osT("Sprint quali"), race.sprintQuali], [osT("Sprint"), race.sprint], [osT("Quali"), race.quali], [osT("Race"), race.start]]
-      .filter(([, t]) => Number.isFinite(t) && t > now.getTime() - this.F1_AFTER)
+  // the weekend's sessions in order: on a sprint weekend "Quali Sprint", "Sprint Rennen", "Quali Rennen", "Rennen";
+  // otherwise "Quali", "Rennen" (a session the calendar has no time for is left out). done: started 30+ minutes ago.
+  f1Sessions(race, now) {
+    const sprint = Number.isFinite(race.sprint) || Number.isFinite(race.sprintQuali);
+    return [[osT("Sprint quali"), race.sprintQuali], [osT("Sprint race"), race.sprint], [sprint ? osT("Quali race") : osT("Quali"), race.quali], [osT("Race"), race.start]]
+      .filter(([, t]) => Number.isFinite(t))
       .sort((a, b) => a[1] - b[1])
-      .map(([label, start]) => ({ label, start }))[0] || { label: osT("Race"), start: race.start };
+      .map(([label, start]) => ({ label, start, done: start <= now.getTime() - this.F1_AFTER }));
   },
 
   _f1Pill(race, now) {
-    const loc = config.locale || "en-US", h12 = this.config.time.format12;
-    const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    const daysTo = (t) => Math.round((day(new Date(t)) - day(now)) / 86400e3);
-    const time = (t) => new Date(t).toLocaleTimeString(loc, { hour: h12 ? "numeric" : "2-digit", minute: "2-digit", hour12: h12 });   // 05:00 / 5:00 AM
-
-    // "today 14:00", "tomorrow 14:00", "Sat 14:00" this week, "Sat 21.11. 14:00" further off
+    // Start times always in German time (MEZ, in summer MESZ), whatever the Pi's clock is set to: config.js passes
+    // f1TimeZone ("Europe/Berlin" on a German screen; none = the Pi's own)
+    const loc = config.locale || "en-US", h12 = this.config.time.format12, tz = this.config.f1TimeZone || undefined;
+    // a moment's calendar day in that zone, as a day number (for "today", "tomorrow", "in 12 days")
+    const ymd = (t) => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(t)).map((x) => [x.type, x.value])); return Date.UTC(+p.year, +p.month - 1, +p.day) / 86400e3; };
+    const daysTo = (t) => ymd(t) - ymd(now.getTime());
+    const time = (t) => new Date(t).toLocaleTimeString(loc, { timeZone: tz, hour: h12 ? "numeric" : "2-digit", minute: "2-digit", hour12: h12 });   // 05:00 / 5:00 AM
+    // "today 14:00", "tomorrow 14:00", else "Sat 14:00" (the countdown says how far off the weekend is)
     const at = (t) => {
-      const n = daysTo(t), d = new Date(t);
-      if (n <= 0) return osT("today {time}", { time: time(t) });
+      const n = daysTo(t);
+      if (n === 0) return osT("today {time}", { time: time(t) });
       if (n === 1) return osT("tomorrow {time}", { time: time(t) });
-      const wd = d.toLocaleDateString(loc, { weekday: "short" });
-      return n < 7 ? `${wd} ${time(t)}` : `${wd} ${d.toLocaleDateString(loc, { day: "numeric", month: "numeric" })} ${time(t)}`;
+      return `${new Date(t).toLocaleDateString(loc, { timeZone: tz, weekday: "short" })} ${time(t)}`;
     };
-    const next = this.f1Next(race, now);
+    const sessions = this.f1Sessions(race, now);
+    const next = sessions.find((x) => !x.done) || sessions[sessions.length - 1];
     const n = daysTo(next.start);
     const el = document.createElement("div");
     el.className = "hb-f1" + (n <= 0 ? " hb-f1-today" : "");
     el.innerHTML = `<span class="hb-f1-flag"><svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M5 4h3.5v3H5zM12 4h3.5v3H12zM8.5 7H12v3H8.5zM15.5 7H19v3h-3.5zM5 10h3.5v3H5zM12 10h3.5v3H12z" class="f"/></svg></span>`
       + `<span class="hb-f1-tag">F1</span><span class="hb-f1-name"></span>`
-      + `<span class="hb-f1-session next"><b></b><span></span></span>`
+      + sessions.map((x) => `<span class="hb-f1-session${x === next ? " next" : x.done ? " done" : ""}"><b></b><span></span></span>`).join("")
       + (n > 1 ? `<span class="hb-f1-when"></span>` : "");
-    el.querySelector(".hb-f1-name").textContent = race.name;
-    el.querySelector(".hb-f1-session b").textContent = next.label;
-    el.querySelector(".hb-f1-session span").textContent = at(next.start);
-
+    // a sprint weekend has four times: the name gets short ("GP von China", "Chinese GP") so it still fits
+    el.querySelector(".hb-f1-name").textContent = sessions.length > 2 ? String(race.name).replace(/^Großer Preis /, "GP ").replace(/ Grand Prix\b/, " GP") : race.name;
+    el.querySelectorAll(".hb-f1-session")
+.forEach((x, i) => { x.querySelector("b").textContent = sessions[i].label; x.querySelector("span").textContent = at(sessions[i].start); });
     if (n > 1) el.querySelector(".hb-f1-when").textContent = osT("{n} days", { n });
     return el;
   },
-
 
   _gamePill(g) {
 

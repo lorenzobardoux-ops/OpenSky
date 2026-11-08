@@ -134,10 +134,13 @@ pick an icon, optionally lock it with a PIN, then **Restart now**. Edit or remov
 - `sports`: on game day, a pill shows your team's game, time and channel, then the live score.
   - Leagues: `nfl`, `college-football`, `nba`, `wnba`, `mens-college-basketball`, `mlb`, `nhl`, `mls`, `nwsl`, `epl`.
   - `team` is the short code shown on scoreboards (`NE`, `BOS`, `LAL`…). Leave it `""` for no sports pill.
-- `f1: true`: a pill with the next Formula 1 weekend: the race's name, its next session — sprint qualifying, sprint,
-  qualifying or the race — with its start ("Quali Sa 21.11. 05:00", "today" / "tomorrow" close to it) and the days
-  until it. 30 minutes after a session's start it moves on to the next one; 30 minutes after the race's start to
-  the next weekend.
+- `f1: true`: a pill with the next Formula 1 weekend: the race's name and all its sessions with their start times —
+  "Quali · Race", on a sprint weekend "Quali Sprint · Sprint Race · Quali Race · Race" (then the name is short:
+  "GP von China"). The next session is dark ("today 08:30" / "tomorrow 04:00" close to it), sessions that started
+  30+ minutes ago fade; the days count to the next one. 30 minutes after the race's start the next weekend shows.
+  Times are German time (MEZ, in summer MESZ) on a German screen, else the Pi's own; `"f1TimeZone"` (e.g.
+  `"Europe/London"`) sets another.
+
 
   Phone page: Extras → Formula 1. The calendar comes from Jolpica
 
