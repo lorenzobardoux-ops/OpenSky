@@ -65,7 +65,31 @@ module.exports = async (page, h) => {
   ok("tapping a template opens it to change", await page.evaluate(() => document.querySelector(".tp-name")?.value === "Football training"));
   await page.evaluate(() => document.querySelector(".tp-cancel")?.click());
 
+  // into two calendars (yours and your partner's): shown once; deleting removes both
+  await make("Dinner at my parents", { start: "18:00", end: "21:00", color: "orange", calendars: ["Testers", "Partner"] });
+  await until(() => page.evaluate(() => document.querySelectorAll(".tp-chip").length === 3));
+  await drag(3, days[4]);
+  await until(async () => (await titles(days[4])).includes("Dinner at my parents"));
+  await h.sleep(1500);
+  const twice = (await titles(days[4])).filter((t) => t === "Dinner at my parents").length;
+  const copies = await page.evaluate(() => Object.entries(window.OpenSkyEventCopies).find(([k]) => k.startsWith("dinner at my parents"))?.[1]);
+  ok("a template event in two calendars is shown once (both are known)", twice === 1 && JSON.stringify(copies) === '["Testers","Partner"]', { twice, copies });
+  await page.evaluate((d) => [...document.querySelectorAll(`.hd-day[data-day="${d}"] .hd-event`)].find((p) => /Dinner/.test(p.textContent)).click(), days[4]);
+  await h.sleep(400);
+  await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.textContent === "Delete Event").click());
+  await h.sleep(300);
+  await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.textContent === "Delete").click());
+  await until(async () => !(await titles(days[4])).includes("Dinner at my parents"));
+  await h.sleep(800);
+  ok("deleting it removes it from both calendars", !(await titles(days[4])).includes("Dinner at my parents") && !(await page.evaluate(() => Object.keys(window.OpenSkyEventCopies).some((k) => k.startsWith("dinner at my parents")))));
+
   const f = Object.entries(R).filter(([, v]) => !v).map(([k]) => k);
+
   h.log(`SUMMARY: ${f.length ? "FAILED: " + f.join("; ") : "ALL CHECKS PASSED"} (${Object.keys(R).length} checks)`);
 };
-module.exports.patchSettings = (s) => { s.home = { panel: "templates" }; };
+module.exports.patchSettings = (s) => {
+  s.home = { panel: "templates" };
+  s.calendar = s.calendar || {};
+  s.calendar.sources = [...(s.calendar.sources || []), { name: "Partner", type: "local", color: "pink" }];
+};
+

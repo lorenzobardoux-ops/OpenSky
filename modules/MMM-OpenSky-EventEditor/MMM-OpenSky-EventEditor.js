@@ -146,7 +146,7 @@ Module.register("MMM-OpenSky-EventEditor", {
     details.appendChild(this.createDetailRow(this.getClockIcon(), this.formatEventDateTime(ev)));
     if (ev.location) details.appendChild(this.createDetailRow(this.getPinIcon(), ev.location));
     if (ev.description) details.appendChild(this.createDetailRow(this.getDocIcon(), ev.description));
-    details.appendChild(this.createDetailRow(this.getCalendarIcon(), ev.calendarName || osT("Calendar")));
+    details.appendChild(this.createDetailRow(this.getCalendarIcon(), this.calendarsOf(ev).join(", ") || osT("Calendar")));
     container.appendChild(details);
 
     if (editable) {
@@ -231,10 +231,11 @@ Module.register("MMM-OpenSky-EventEditor", {
 
     const text = document.createElement("div");
     text.className = "event-confirm-text";
-    const cal = this.currentEvent.calendarName;
-    const everywhere = (this.editableCal(cal) || {}).type === "caldav";
-    const v = { title: this.currentEvent.title, calendar: cal };
-    text.textContent = everywhere ? osT("\"{title}\" will be removed from the {calendar} calendar on every device.", v) : osT("\"{title}\" will be removed from the {calendar} calendar.", v);
+    const cals = this.editableOf(this.currentEvent), cal = cals[0] || this.currentEvent.calendarName;
+    const everywhere = cals.some((c) => (this.editableCal(c) || {}).type === "caldav");
+    const v = { title: this.currentEvent.title, calendar: cal, calendars: cals.join(", ") };
+    text.textContent = cals.length > 1 ? osT("\"{title}\" will be removed from the calendars {calendars}.", v)
+      : everywhere ? osT("\"{title}\" will be removed from the {calendar} calendar on every device.", v) : osT("\"{title}\" will be removed from the {calendar} calendar.", v);
 
     container.appendChild(text);
 
@@ -408,27 +409,48 @@ Module.register("MMM-OpenSky-EventEditor", {
     if (n === "OS_EV_RESULT" && this.pending.has(p.id)) { const done = this.pending.get(p.id); this.pending.delete(p.id); done(p); }
   },
 
+  // The calendars an event is in: one, or — for an event placed from a template into several (shown once) — each
+  // (window.OpenSkyEventCopies, set by MMM-OpenSky-Calendars). editableOf: those this screen can change.
+  calendarsOf(ev) {
+    const copies = ev && window.OpenSkyEventKey && (window.OpenSkyEventCopies || {})[window.OpenSkyEventKey(ev)];
+    return copies && copies.includes(ev.calendarName) ? copies : (ev && ev.calendarName ? [ev.calendarName] : []);
+  },
+  editableOf(ev) { return this.calendarsOf(ev).filter((c) => this.editableCal(c)); },
+
+  // calendar: one name, or a list (every copy of a template event gets the same change)
   async send(op, calendar, ref, data, button, busyLabel, successMessage) {
     if (this.busy) return;
     this.busy = true;
     const label = button ? button.textContent : "";
     if (button) { button.textContent = busyLabel; button.disabled = true; }
-    const r = await this.request(op, calendar, ref, data);
+    const cals = Array.isArray(calendar) ? calendar : [calendar];
+    const errors = [];
+    for (const cal of cals) {
+      const r = await this.request(op, cal, ref, data);
+      if (!r.ok) errors.push(cals.length > 1 ? `${cal}: ${r.error || osT("Something went wrong")}` : (r.error || osT("Something went wrong")));
+      // a linked calendar is fetched again now; the on-device calendar shows the change by itself
+      else if ((this.editableCal(cal) || {}).type !== "local") this.sendNotification("OPENSKY_CALENDAR_REFETCH", { name: cal });
+    }
     this.busy = false;
-    if (r.ok) {
+    if (errors.length < cals.length) {
       this.closeModal();
       this.showNotification(successMessage, "success");
-      // a linked calendar is fetched again now; the on-device calendar shows the change by itself
-      if ((this.editableCal(calendar) || {}).type !== "local") this.sendNotification("OPENSKY_CALENDAR_REFETCH", { name: calendar });
-    } else {
-      if (button) { button.textContent = label; button.disabled = false; }
-      this.showNotification(r.error || osT("Something went wrong"), "error");
-    }
+    } else if (button) { button.textContent = label; button.disabled = false; }
+    if (errors.length) this.showNotification(errors.join(" · "), "error");
   },
 
   saveEvent(button) {
     const formData = this.getFormData();
-    if (formData) this.send("update", this.currentEvent.calendarName, this.originalRef(), formData, button, osT("Saving…"), osT("Event updated"));
+    if (!formData) return;
+    // an event from a template keeps its template color (kept by MMM-OpenSky-Templates by calendar + title + day)
+    const ev = this.currentEvent, cals = this.editableOf(ev);
+    if (window.OpenSkyEventColors && window.OpenSkyEventColors.overrideOf(ev)) {
+      const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const toDay = formData.allDay ? String(formData.startDate).slice(0, 10) : ymd(new Date(formData.startDate));
+      this.sendNotification("OPENSKY_TEMPLATE_EVENT_MOVED", { calendars: cals, fromTitle: ev.title, fromDay: ymd(new Date(Number(ev.startDate))), toTitle: formData.title, toDay });
+    }
+    this.send("update", cals, this.originalRef(), formData, button, osT("Saving…"), osT("Event updated"));
+
   },
 
   createEvent(button) {
@@ -438,7 +460,14 @@ Module.register("MMM-OpenSky-EventEditor", {
   },
 
   deleteEvent(button) {
-    this.send("delete", this.currentEvent.calendarName, this.originalRef(), null, button, osT("Deleting…"), osT("Event deleted"));
+    const ev = this.currentEvent, cals = this.editableOf(ev);
+    if (window.OpenSkyEventColors && window.OpenSkyEventColors.overrideOf(ev)) {
+      const d = new Date(Number(ev.startDate)), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      this.sendNotification("OPENSKY_TEMPLATE_EVENT_DELETED", { calendars: cals, title: ev.title, day });
+    }
+    this.send("delete", cals, this.originalRef(), null, button, osT("Deleting…"), osT("Event deleted"));
+
+
   },
 
   getFormData() {
@@ -475,7 +504,8 @@ Module.register("MMM-OpenSky-EventEditor", {
   },
 
   isEditable(event) {
-    return !!(event && event.calendarName && this.editableCal(event.calendarName));
+    return this.editableOf(event).length > 0;
+
   },
 
   /* ---------------- formatting ---------------- */

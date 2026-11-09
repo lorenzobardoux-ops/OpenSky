@@ -24,7 +24,16 @@ module.exports = NodeHelper.create({
       if (p.op === "save") { const list = templates.save(p.template, this.calendars); this.sendSocketNotification("OS_TPL_LIST", { templates: list }); return done({ templates: list }); }
       if (p.op === "remove") { const list = templates.remove(p.tid); this.sendSocketNotification("OS_TPL_LIST", { templates: list }); return done({ templates: list }); }
       if (p.op === "plan") return done(templates.plan(p.tid, p.day));
+      if (p.op === "moved" || p.op === "forget") {
+        if (p.op === "moved") templates.moved(p.calendars, String(p.fromTitle), String(p.fromDay), String(p.toTitle), String(p.toDay));
+        else templates.forget(p.calendars, String(p.title), String(p.day));
+
+        const colors = templates.colors();
+        this.sendSocketNotification("OS_TPL_COLORS", { colors });
+        return done({ colors });
+      }
       if (p.op === "placed") {
+
         templates.placed(String(p.calendar), String(p.title), String(p.day), p.color);
         const colors = templates.colors();
         this.sendSocketNotification("OS_TPL_COLORS", { colors });

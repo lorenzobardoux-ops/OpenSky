@@ -39,7 +39,15 @@ let colors = tpl.colors();
 ok("10 colors by calendar + title + day, kept apart from the calendars", colors["OpenSky|football training|2026-11-10"] === "green" && colors["Testers|visit grandma|2026-11-14"] === "#8b5cf6" && Object.keys(colors).length === 2, colors);
 tpl.placed("OpenSky", "Old", "2024-01-01", "red", Date.parse("2026-11-10"));
 ok("11 colors of events long past are forgotten", !tpl.colors()["OpenSky|old|2024-01-01"]);
+tpl.moved(["OpenSky"], "Football training", "2026-11-10", "Football match", "2026-11-12");
+colors = tpl.colors();
+ok("11b an edited event (new title / day) keeps its template color", colors["OpenSky|football match|2026-11-12"] === "green" && !colors["OpenSky|football training|2026-11-10"], colors);
+tpl.placed("Lena", "Football match", "2026-11-12", "green");
+tpl.forget(["OpenSky", "Lena"], "Football match", "2026-11-12");
+ok("11c a deleted event's color is forgotten in every calendar it was in", !tpl.colors()["OpenSky|football match|2026-11-12"] && !tpl.colors()["Lena|football match|2026-11-12"] && tpl.colors()["Testers|visit grandma|2026-11-14"]);
+tpl.placed("OpenSky", "Football training", "2026-11-10", "green");
 tpl.remove(id);
+
 ok("12 remove a template (its events stay — they're ordinary events)", tpl.list().length === 1 && tpl.colors()["OpenSky|football training|2026-11-10"] === "green");
 fs.writeFileSync(process.env.OPENSKY_TEMPLATES, "{ broken");
 const errs = []; const orig = console.error; console.error = (m) => errs.push(m);
@@ -57,7 +65,25 @@ ok("14 screen: an event from a template gets its color; the same title another d
   EC.name({ calendarName: "OpenSky", title: "Football Training", startDate: at(2026, 11, 10, 17) }) === "green" &&
   EC.name({ calendarName: "Testers", title: "Visit Grandma", startDate: String(Date.UTC(2026, 10, 14)) }) === "#8b5cf6" &&
   EC.name({ calendarName: "OpenSky", title: "Football Training", startDate: at(2026, 11, 11, 17) }) === "gray");
+// the same template event in two calendars (yours and your partner's) is one event on the screen
+const evs = [
+  { calendarName: "OpenSky", title: "Football Training", startDate: at(2026, 11, 10, 17), endDate: at(2026, 11, 10, 18) },
+  { calendarName: "Lena", title: "Football training", startDate: at(2026, 11, 10, 17), endDate: at(2026, 11, 10, 18) },
+  { calendarName: "Lena", title: "Football training", startDate: at(2026, 11, 11, 17), endDate: at(2026, 11, 11, 18) },   // another day: not a template event
+  { calendarName: "Testers", title: "Visit Grandma", startDate: String(Date.UTC(2026, 10, 14)), endDate: String(Date.UTC(2026, 10, 15)), fullDayEvent: true },
+  { calendarName: "Lena", title: "Visit Grandma", startDate: at(2026, 11, 14), endDate: at(2026, 11, 15), fullDayEvent: true }   // all day at local midnight
+];
+EC.setOverrides({ "OpenSky|football training|2026-11-10": "green", "Lena|football training|2026-11-10": "green", "Testers|visit grandma|2026-11-14": "#8b5cf6", "Lena|visit grandma|2026-11-14": "#8b5cf6" });
+const mod = {}; global.Module = { register: (n, d) => Object.assign(mod, d) };
+require(path.join(__dirname, "..", "modules", "MMM-OpenSky-Calendars", "MMM-OpenSky-Calendars.js"));
+const shown = mod.oneOfEach(evs);
+ok("15 a template event in several calendars is shown once (also all day, kept at UTC or local midnight); the calendars are known",
+  shown.length === 3 && shown.filter((e) => /football/i.test(e.title)).length === 2 &&
+  JSON.stringify(window.OpenSkyEventCopies[window.OpenSkyEventKey(evs[0])]) === '["OpenSky","Lena"]' &&
+  JSON.stringify(window.OpenSkyEventCopies[window.OpenSkyEventKey(evs[3])]) === '["Testers","Lena"]', shown.map((e) => `${e.calendarName}:${e.title}`));
+delete global.Module;
 delete global.window; delete global.document;
+
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`SUMMARY pass=${pass} fail=${fail}`);

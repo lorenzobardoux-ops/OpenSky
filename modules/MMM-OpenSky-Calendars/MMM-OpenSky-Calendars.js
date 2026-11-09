@@ -48,12 +48,32 @@ Module.register("MMM-OpenSky-Calendars", {
       for (const ev of evs) list.push({ ...ev, calendarName: src.name, color, colorName: src.color || null, symbol: [] });
     }
     list.sort((a, b) => Number(a.startDate) - Number(b.startDate));
-    this.sendNotification("CALENDAR_EVENTS", list);
+    this.sendNotification("CALENDAR_EVENTS", this.oneOfEach(list));
+
     if (this.config.sources.some((src) => src.role === "pickup")) this.sendNotification("OPENSKY_PICKUP_EVENTS", pickup);
     this.sendNotification("OPENSKY_CALENDAR_STATUS", { ...this.status });
   },
 
+  /* An event placed from a template into several calendars (yours and your partner's) is one event on the screen:
+   * the copies with the same title, start and end — and a template color (OpenSkyEventColors.overrideOf) — are shown
+   * once (the first calendar's, in the order of calendar.sources). window.OpenSkyEventCopies tells the event editor
+   * which calendars hold it, so a change or delete reaches every copy. */
+  oneOfEach(list) {
+    const EC = window.OpenSkyEventColors;
+    const copies = {}, out = [];
+    for (const ev of list) {
+      if (!EC || !EC.overrideOf(ev)) { out.push(ev); continue; }
+      const key = window.OpenSkyEventKey(ev);
+      if (copies[key]) { if (!copies[key].includes(ev.calendarName)) copies[key].push(ev.calendarName); continue; }
+      copies[key] = [ev.calendarName];
+      out.push(ev);
+    }
+    window.OpenSkyEventCopies = copies;
+    return out;
+  },
+
   notificationReceived(n, p) {
+
     // a page that asks again (e.g. after a reload) gets the current list
     if (n === "OPENSKY_CALENDAR_REFRESH" && this.events.size) this.broadcast();
     // after an edit: fetch that source again now (instead of at its next interval)

@@ -257,8 +257,12 @@ used any number of times. Tap a template to change or delete it; **New** adds on
 - No calendar chosen: the events go to **OpenSky**, the screen's own calendar (on the Pi, like the on-device
   calendar; nobody else sees it). Chosen calendars (on-device, iCloud/CalDAV, Google): the event goes there, so it
   shows on everyone's phones too.
+- Several calendars chosen (e.g. yours and your partner's): the event is put in each, but the screen shows it
+  **once**; tap it to see all its calendars — a change or delete on the screen reaches every copy.
 - The color is never written into a calendar: the Pi remembers which events came from which template
-  (`config/templates.json`) and paints them on the screen. Tap such an event to change or delete it as usual.
+  (`config/templates.json`) and paints them on the screen. Tap such an event to change or delete it as usual (the
+  color follows a new name or day).
+
 - Kept in `config/templates.json` (templates + colors); `OpenSky` is a name OpenSky uses itself for a calendar.
 
 ## Photos

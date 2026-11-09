@@ -28,13 +28,18 @@ Module.register("MMM-OpenSky-Templates", {
 
   getDom() { return document.createElement("div"); },   // the card lives in Home's .hd-templates
 
-  notificationReceived(n) {
+  notificationReceived(n, p) {
     if (n === "DOM_OBJECTS_CREATED") {
       // Home may draw its page again: fill each new (empty) card
       new MutationObserver(() => { const host = document.querySelector(".hd-templates"); if (host && !host.firstChild) this.render(); })
         .observe(document.body, { childList: true, subtree: true });
       this.render();
     } else if ((n === "OPENSKY_IDLE_RESET" || n === "PAGE_CHANGED") && this.popup && !this.busy) this.closeForm();
+    // an event from a template was changed in the event editor: its color follows it (new title / day)
+    else if (n === "OPENSKY_TEMPLATE_EVENT_MOVED" && p) this.call("moved", p);
+    else if (n === "OPENSKY_TEMPLATE_EVENT_DELETED" && p) this.call("forget", p);
+
+
   },
 
   socketNotificationReceived(n, p) {
