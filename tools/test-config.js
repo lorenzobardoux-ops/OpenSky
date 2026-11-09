@@ -110,7 +110,14 @@ ok("19 German: sidebar, header, timer buttons and keyboard in German; dates de-D
   { sideDe, kb: mod(de, "MMM-OpenSky-Keyboard").config.layout });
 const en = build({ pages: ["home", "calendar"], header: { f1: true } });
 ok("21 header.f1 reaches the header (off unless true)", mod(en, "MMM-OpenSky-Header").config.f1 === true && mod(de, "MMM-OpenSky-Header").config.f1 === false);
+const tp = build({ pages: ["home", "calendar"], home: { panel: "templates" }, calendar: { sources: [{ name: "Family", type: "local" }, { name: "OpenSky", url: "https://x/evil.ics" }] } });
+const tpSources = mod(tp, "MMM-OpenSky-Calendars").config.sources;
+ok("23 home.panel \"templates\": the templates card instead of photos, OpenSky's own calendar (a source can't take its name), the other calendars to choose",
+  mod(tp, "MMM-OpenSky-Home").config.templates === true && mod(tp, "MMM-OpenSky-Home").config.photos.enabled === false &&
+  tpSources.filter((c) => c.name === "OpenSky").length === 1 && tpSources.find((c) => c.name === "OpenSky").type === "local" &&
+  JSON.stringify(mod(tp, "MMM-OpenSky-Templates").config.calendars) === '["Family"]' && !mod(en, "MMM-OpenSky-Templates"), tpSources);
 ok("22 F1 start times: German time on a German screen, the Pi's own otherwise",
+
   mod(de, "MMM-OpenSky-Header").config.f1TimeZone === "Europe/Berlin" && mod(en, "MMM-OpenSky-Header").config.f1TimeZone === null);
 
 

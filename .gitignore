@@ -14,6 +14,7 @@ config/calendar-cache/
 config/icloud-session/
 config/local-calendar.json*
 config/lists.json*
+config/templates.json*
 config/device.json*
 config/wordgame.json*
 config/backup-status.json

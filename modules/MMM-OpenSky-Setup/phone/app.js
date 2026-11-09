@@ -512,10 +512,21 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
       field(osT("Immich API key"), secretInput("photos.immich.apiKey", osT("Paste the key")), osT("In Immich: Account Settings → API Keys."))
     ] : [el("p", { class: "hint" }, osT("No photo card — the lists get more room."))]));
     draw(mode);
-    return section("photos", "photos", osT("Photos"), osT("A slideshow on the Home page"),
-      seg([["folder", osT("On the Pi")], ["immich", "Immich"], ["off", osT("Off")]], mode, (m) => { P.enabled = m !== "off"; if (m !== "off") P.provider = m; change(); draw(m); }),
+    // Home's lower right card: the photos, or event templates (drag a standard event onto a day — made on the screen)
+    S.home = S.home && typeof S.home === "object" ? S.home : {};
+    const photoPart = el("div", {}, seg([["folder", osT("On the Pi")], ["immich", "Immich"], ["off", osT("Off")]], mode, (m) => { P.enabled = m !== "off"; if (m !== "off") P.provider = m; change(); draw(m); }),
       body,
       field(osT("Change photo every"), select([[15, osT("15 seconds")], [30, osT("30 seconds")], [60, osT("1 minute")], [300, osT("5 minutes")]], Number(P.intervalSeconds) || 30, (v) => { P.intervalSeconds = Number(v); change(); })));
+    const tplNote = el("p", { class: "hint" }, osT("Standard events (name, notes, time or all day, color, calendars) to drag onto a day. Make them on the screen: Templates → New."));
+    const showPanel = (p) => { photoPart.hidden = p === "templates"; tplNote.hidden = p !== "templates"; };
+    showPanel(S.home.panel);
+    return section("photos", "photos", osT("Photos"), osT("A slideshow on the Home page"),
+      field(osT("Home, lower right"), seg([["photos", osT("Photos")], ["templates", osT("Templates")]], S.home.panel === "templates" ? "templates" : "photos", (v) => {
+        if (v === "templates") S.home.panel = "templates"; else delete S.home.panel;
+        change(); showPanel(v);
+      })),
+      tplNote, photoPart);
+
   }
 
   function pagesCard() {

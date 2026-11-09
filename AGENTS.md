@@ -24,7 +24,7 @@ MagicMirror². This file is the entry point; read it first, then the docs it poi
 ## Where things are on an installed Pi
 | What | Where |
 |---|---|
-| The user's settings + data (back this up) | `~/OpenSky/config/`: `opensky.json`, `secrets.json` (chmod 600), `device.json` (Settings panel), `local-calendar.json`, `lists.json`, `calendar-cache/`, `icloud-session/` (Apple Reminders sign-in; not backed up) |
+| The user's settings + data (back this up) | `~/OpenSky/config/`: `opensky.json`, `secrets.json` (chmod 600), `device.json` (Settings panel), `local-calendar.json`, `lists.json`, `templates.json`, `calendar-cache/`, `icloud-session/` (Apple Reminders sign-in; not backed up) |
 | Runtime (re-creatable by `./install.sh`) | `~/.local/share/opensky/`: `MagicMirror/` (pinned tag, OpenSky linked in by `tools/link-mm.sh`), `node/` (only if the system Node is too old), `venv/` |
 | Services | systemd **user** units `opensky.service` (Electron) + `opensky-calendar.service` (CalDAV helper + Apple Reminders, `services/calendar-service`); started by `~/.config/autostart/opensky.desktop` |
 | Commands | `opensky status · logs · check · restart · edit · secrets · update · pull-hook on\|off` (`tools/opensky`) |

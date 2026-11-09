@@ -22,6 +22,7 @@ Module.register("MMM-OpenSky-Home", {
     canAddEvents: false,         // true when an event editor module is installed
     maxEventsPerDay: 4,
     eventColors: null,           // calendar.colors from opensky.json
+    templates: false,            // true: the right side's lower card holds event templates (MMM-OpenSky-Templates) instead of photos
     photos: { enabled: true, provider: "folder", folder: null, usb: true, url: null, intervalSeconds: 30 },
     pickup: null                 // resolved pickup schedule (see lib/client/pickup.js); null = no icons
   },
@@ -127,6 +128,7 @@ Module.register("MMM-OpenSky-Home", {
           </header>
           <div class="hd-list-columns"></div>
         </section>
+        ${this.config.templates ? `<section class="hd-templates" aria-label="${osT("Templates")}"></section>` : ""}
         ${this.photosOn() ? `<section class="hd-photo" aria-label="${osT("Family photos")}">
           <div class="hd-photo-empty">${this.icon("image")}<span class="hd-photo-msg">${osT("Photos will appear here")}</span></div>
         </section>` : ""}
@@ -285,6 +287,8 @@ Module.register("MMM-OpenSky-Home", {
   dayTile(day, events, isToday) {
     const tile = document.createElement("div");
     tile.className = "hd-day" + (isToday ? " hd-is-today" : "");
+    tile.dataset.day = this.dateKey(day);   // a template dropped here goes on this day (MMM-OpenSky-Templates)
+
     const weather = this.forecast[this.dateKey(day)];
     tile.innerHTML = `
       <div class="hd-day-head">

@@ -83,7 +83,7 @@ const folderPath = (f) => (!f ? null : /^[~/]/.test(f) ? f : path.join(settingsD
 // Calendar sources (a module with no screen of its own; any page can use the events)
 const cal = s.calendar || {};
 const calendarSources = (Array.isArray(cal.sources) ? cal.sources : []).filter((c) => c && c.name)
-  .filter((c) => c.name !== "Pickup" && c.name !== "Holidays")   // (names OpenSky uses itself)
+  .filter((c) => c.name !== "Pickup" && c.name !== "Holidays" && c.name !== "OpenSky")   // (names OpenSky uses itself)
   .map((c) => ({ name: String(c.name), type: ["local", "caldav", "google"].includes(c.type) ? c.type : "link", url: c.url || null, color: c.color || null, fetchMinutes: c.fetchMinutes || 5,
     ...(c.type === "google" ? { calendarId: String(c.calendarId || "primary"), readOnly: !!c.readOnly } : {}) }));
 // CalDAV calendars are read through OpenSky's calendar service on this Pi (the account stays in secrets.json)
@@ -104,6 +104,11 @@ const familyLists = (Array.isArray(listSettings.lists) ? listSettings.lists : []
 // or a private one in secrets.json → calendar.sources.Pickup (with pickup.url: "secret")
 const pk = s.pickup || {};
 if (pk.url) calendarSources.push({ name: "Pickup", type: "link", role: "pickup", url: pk.url === "secret" ? null : pk.url, color: "gray", fetchMinutes: 720 });
+// Home: the right side shows photos (default) or event templates (home.panel "templates": standard events to drag onto
+// a day). Template events that go to no other calendar live in OpenSky's own on-device calendar "OpenSky".
+const homeSettings = s.home || {};
+const templatesOn = homeSettings.panel === "templates" && (Array.isArray(s.pages) && s.pages.length ? s.pages : ["home"]).includes("home");
+if (templatesOn) calendarSources.push({ name: "OpenSky", type: "local", color: "gray", fetchMinutes: 5 });
 const editableCalendars = calendarSources.filter((c) => c.type === "local" || c.type === "caldav" || (c.type === "google" && !c.readOnly))
   .map((c) => ({ name: c.name, type: c.type, ...(c.type === "google" ? { calendarId: c.calendarId } : {}) }));
 const canAddEvents = editableCalendars.length > 0;
@@ -157,8 +162,10 @@ const PAGES = {
       canAddEvents,
       maxEventsPerDay: 4,
       eventColors: (s.calendar && s.calendar.colors) || null,
+      templates: templatesOn,
       photos: {
-        enabled: !(s.photos && s.photos.enabled === false),
+        enabled: !templatesOn && !(s.photos && s.photos.enabled === false),
+
         provider: (s.photos && s.photos.provider) || "folder",
         folder: folderPath(s.photos && s.photos.folder) || "~/Pictures",
         usb: !(s.photos && s.photos.usb === false),
@@ -248,6 +255,9 @@ const fixed = [
 
   ...(familyLists.length ? [{ module: "MMM-OpenSky-Lists", config: { lists: familyLists, refreshMinutes: listSettings.refreshMinutes || 2 } }] : []),
   ...(calendarSources.length ? [{ module: "MMM-OpenSky-EventEditor", config: { editable: editableCalendars, servicePort } }] : []),
+  // event templates on Home (the calendars a template may also go to: the editable ones, not OpenSky's own)
+  ...(templatesOn ? [{ module: "MMM-OpenSky-Templates", config: { calendars: editableCalendars.filter((c) => c.name !== "OpenSky").map((c) => c.name) } }] : []),
+
   ...(calendarSources.length ? [{ module: "MMM-OpenSky-Calendars", config: { sources: calendarSources } }] : []),
   {
     module: "MMM-OpenSky-Header",

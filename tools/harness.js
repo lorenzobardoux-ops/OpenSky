@@ -34,6 +34,9 @@ fs.rmSync(WORDGAME, { force: true });
 const LOCAL_LISTS = path.join(OUT, "lists.test.json");
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(LOCAL_LISTS, JSON.stringify({ version: 1, lists: { Groceries: [{ id: "g1", text: "Milk" }, { id: "g2", text: "Apples" }] } }));
+// event templates (Home's templates card), empty each run
+const TEMPLATES = path.join(OUT, "templates.test.json");
+fs.rmSync(TEMPLATES, { force: true });
 // tools/opensky-start sets LANGUAGE from opensky.json → locale.locale; the harness does the same
 function settingsLanguage() {
   try {
@@ -78,6 +81,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       OPENSKY_LOCAL_LISTS: LOCAL_LISTS,
       OPENSKY_DEVICE_SETTINGS: DEVICE,
       OPENSKY_WORDGAME: WORDGAME,
+      OPENSKY_TEMPLATES: TEMPLATES,
+
       OPENSKY_SETUP_PORT: "8091",
       OPENSKY_WELCOME_FILE: WELCOME,
       OPENSKY_NYT_URL: "http://127.0.0.1:9/nyt", OPENSKY_F1_URL: "http://127.0.0.1:9/f1",   // never the real NYT from tests: unreachable → OpenSky's own word

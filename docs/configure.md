@@ -246,7 +246,23 @@ In `opensky.json`: `{ "name": "Shared", "type": "caldav", "color": "green" }`. T
 - Home shows
  the first three lists; the **Lists** page shows them all (`columns` fit across, more scroll sideways). Tap **Add item** to add, tap the circle to check off (with Undo), or tap an item to edit or delete it.
 
+## Templates (instead of photos)
+```json
+"home": { "panel": "templates" }
+```
+The lower right card on Home holds **event templates** instead of the photos (phone page: Photos → *Home, lower
+right* → Templates). A template is a standard event — name, notes, a time or all day, a color, and optionally the
+calendars it goes to. **Drag it onto a day** of the week view and that event is put on that day; a template can be
+used any number of times. Tap a template to change or delete it; **New** adds one. They're made on the screen.
+- No calendar chosen: the events go to **OpenSky**, the screen's own calendar (on the Pi, like the on-device
+  calendar; nobody else sees it). Chosen calendars (on-device, iCloud/CalDAV, Google): the event goes there, so it
+  shows on everyone's phones too.
+- The color is never written into a calendar: the Pi remembers which events came from which template
+  (`config/templates.json`) and paints them on the screen. Tap such an event to change or delete it as usual.
+- Kept in `config/templates.json` (templates + colors); `OpenSky` is a name OpenSky uses itself for a calendar.
+
 ## Photos
+
 ```json
 "photos": { "enabled": true, "provider": "folder", "folder": "~/Pictures", "usb": true, "intervalSeconds": 30 }
 ```
