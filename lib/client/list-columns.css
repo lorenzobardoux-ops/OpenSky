@@ -46,13 +46,22 @@
   cursor: pointer;
 }
 .lc-add-item svg { width: 20px; height: 20px; }
+/* the items scroll (a finger drag too: OpenSkyDragScroll); the bottom fades only while there's more below */
 .lc-items {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent);
-  mask-image: linear-gradient(to bottom, #000 88%, transparent);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  user-select: none;
+  -webkit-user-select: none;
 }
+.lc-items.lc-more {
+  -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent);
+  mask-image: linear-gradient(to bottom, #000 85%, transparent);
+}
+
 .lc-item {
   display: flex;
   align-items: flex-start;       /* circle stays on the first line of a wrapped item */

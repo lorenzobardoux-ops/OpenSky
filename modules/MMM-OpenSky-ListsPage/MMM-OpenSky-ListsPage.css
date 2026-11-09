@@ -45,13 +45,8 @@
 .lp-columns:not(:has(> .lc-list:nth-child(4))) { grid-auto-columns: minmax(0, 1fr); }
 .lp-columns:has(> .lc-list:only-child) { grid-auto-columns: minmax(0, 620px); }
 
-/* on this page every list scrolls (Home fades the bottom instead) */
-.lp-columns .lc-items {
-  overflow-y: auto;
-  -webkit-mask-image: none;
-  mask-image: none;
-  overscroll-behavior: contain;
-}
+/* (the items scroll on both pages: lib/client/list-columns.css) */
+
 .lp-columns .lc-item-text { -webkit-line-clamp: unset; }
 
 .lp-none { margin: 40px auto; font-size: 20px; color: #6b7280; text-align: center; }

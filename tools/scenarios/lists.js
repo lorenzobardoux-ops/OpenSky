@@ -81,7 +81,26 @@ module.exports = async (page, h) => {
   many.lists.Chores = [...Array(30)].map((_, i) => ({ id: `c${i}`, text: `Chore number ${i + 1}` }));
   fs.writeFileSync(FILE, JSON.stringify(many));
   await h.sleep(3200);   // (refreshes are throttled to one per 3 s)
+  // Home: a long list scrolls — by dragging (a touchscreen that acts like a mouse), keeping its place on a redraw
+  await page.evaluate(() => MM.getModules().withClass("MMM-OpenSky-Home")[0].sendNotification("OPENSKY_LISTS_REFRESH"));
+  await until(async () => (await page.evaluate(() => document.querySelectorAll(".hd-lists .lc-item").length)) >= 30);
+  const homeBox = () => page.evaluate(() => { const b = [...document.querySelectorAll(".hd-lists .lc-list")].find((c) => /Chores/.test(c.textContent)).querySelector(".lc-items"); return { top: b.scrollTop, more: b.classList.contains("lc-more") }; });
+  const hb = await h.box(".hd-lists .lc-list:nth-child(2) .lc-items");
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height * 0.8);
+  await page.mouse.down();
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height * 0.2, { steps: 10 });
+  await page.mouse.up();
+  await h.sleep(300);
+  const scrolled = await homeBox();
+  await page.evaluate(() => MM.getModules().withClass("MMM-OpenSky-Home")[0].renderLists());
+  await h.sleep(200);
+  const redrawn = await homeBox();
+  ok("Home: a long list scrolls with a drag (no item opens), and keeps its place when redrawn", scrolled.top > 50 && Math.abs(redrawn.top - scrolled.top) < 2 && !(await popup()), { scrolled, redrawn });
+  await page.evaluate(() => { const b = [...document.querySelectorAll(".hd-lists .lc-list")].find((c) => /Chores/.test(c.textContent)).querySelector(".lc-items"); b.scrollTop = b.scrollHeight; });
+  await h.sleep(200);
+  ok("Home: the bottom fades only while there's more below", !(await homeBox()).more);
   await h.tap(".hd-see-all");   // the Lists page asks for fresh lists when it opens
+
   await until(async () => (await page.evaluate(() => document.querySelectorAll(".lp-root .lc-item").length)) === 30);
   const lp = () => page.evaluate(() => {
     const vis = (e) => !!e && e.checkVisibility({ opacityProperty: true, visibilityProperty: true });

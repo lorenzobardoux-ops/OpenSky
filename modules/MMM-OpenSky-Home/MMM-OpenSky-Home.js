@@ -381,15 +381,22 @@ Module.register("MMM-OpenSky-Home", {
     this.root.classList.toggle("hd-no-lists", !all.length);
     const cols = card.querySelector(".hd-list-columns");
     cols.style.setProperty("--list-count", Math.min(3, Math.max(1, all.length)));
+    // keep each list's scroll position across updates (a check-off or the regular refresh redraws the lists)
+    const scroll = new Map([...cols.querySelectorAll(".lc-list")].map((c) => [c.dataset.key, c.querySelector(".lc-items").scrollTop]));
     cols.innerHTML = "";
     all.slice(0, 3).forEach((list, idx) => {
       const send = (n, extra) => this.sendNotification(n, { source: list.source, listId: list.id, ...extra });
-      cols.appendChild(window.OpenSkyListColumn.render(list, {
+      const col = window.OpenSkyListColumn.render(list, {
         add: () => send("OPENSKY_LIST_ADD"),
         check: (item, el) => send("OPENSKY_LIST_CHECK", { item, el }),
         edit: (item) => send("OPENSKY_LIST_EDIT", { item })
-      }, { alt: idx % 2 === 1 }));
+      }, { alt: idx % 2 === 1 });
+      col.dataset.key = `${list.source}/${list.id}`;
+      cols.appendChild(col);
+      const top = scroll.get(col.dataset.key);
+      if (top) col.querySelector(".lc-items").scrollTop = top;
     });
+
   },
 
   /* ======================= curbside pickup ======================= */
