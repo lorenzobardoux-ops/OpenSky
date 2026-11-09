@@ -16,6 +16,8 @@ iCloud needs an app-specific password (appleid.apple.com → Sign-In and Securit
 
 The last good feed of each calendar is kept on disk, so the screen still shows events after a reboot without internet.
 Repeating events can't be changed here (the server's calendar app is the right place for that).
+Apple Reminders lists (shared ones too) for the screen's Lists: reminders.py, under /_reminders/.
+
 Based on the OpenSky reference build's iCloud backend.
 """
 import json
@@ -64,6 +66,10 @@ def local_tz():
 
 TZ = local_tz()
 app = Flask(__name__)
+# Apple Reminders lists (reminders.py: /_reminders/…; needs pyicloud, which install.sh puts in the venv)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import reminders  # noqa: E402
+app.register_blueprint(reminders.bp)
 _lock = threading.Lock()
 _accounts, _mtime, _calendars = {}, 0, {}
 

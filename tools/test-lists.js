@@ -133,6 +133,38 @@ const server = http.createServer((req, res) => {
   ok("22 HA: a refused token is explained", /refused the token/.test(await fails(() => hap.items(shopping))));
   haServer.close();
 
+  // Apple Reminders: through a stand-in for the calendar service's /_reminders (services/calendar-service/reminders.py)
+  const rem = [{ id: "r1", text: "Milch" }], remCalls = [];
+  const remServer = http.createServer((req, res) => {
+    let body = ""; req.on("data", (c) => { body += c; });
+    req.on("end", () => {
+      const u = new URL(req.url, "http://x"), b = JSON.parse(body || "{}"), send = (code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
+      remCalls.push(`${req.method} ${u.pathname}${u.search} ${body}`);
+      if (u.searchParams.get("list") === "Signed out") return send(401, { error: "Apple Reminders: the sign-in has ended — sign in again", signIn: true });
+      if (u.pathname === "/_reminders/items") return send(200, { items: rem });
+      if (u.pathname === "/_reminders/add") { rem.push({ id: `r${rem.length + 1}`, text: b.text }); return send(200, { ok: true }); }
+      const i = rem.findIndex((x) => x.id === b.id);
+      if (u.pathname === "/_reminders/edit") { rem[i].text = b.text; return send(200, { ok: true }); }
+      if (u.pathname === "/_reminders/check" || u.pathname === "/_reminders/remove") { rem.splice(i, 1); return send(200, { ok: true }); }
+      send(404, {});
+    });
+  });
+  await new Promise((r) => remServer.listen(0, "127.0.0.1", r));
+  process.env.OPENSKY_CALENDAR_PORT = String(remServer.address().port);
+  const shared = { name: "Einkauf", provider: "icloud", reminderList: "Einkauf Lena & Lorenzo" }, rp = lists.provider(shared);
+  items = await rp.items(shared);
+  ok("23 Apple Reminders: the list's items, asked by its name in Reminders", items.map((x) => x.text).join() === "Milch" && remCalls[0].includes("list=Einkauf%20Lena%20%26%20Lorenzo"), remCalls[0]);
+  await rp.add(shared, "  Eier "); await rp.edit(shared, { id: "r1" }, "Hafermilch"); items = await rp.items(shared);
+  ok("24 Apple Reminders: add (cleaned) and rename", items.map((x) => x.text).join() === "Hafermilch,Eier" && remCalls.some((c) => c.includes('"text":"Eier"')), items);
+  await rp.check(shared, { id: "r1" }); await rp.remove(shared, { id: "r2" });
+  ok("25 Apple Reminders: check off and delete", (await rp.items(shared)).length === 0 && remCalls.some((c) => c.startsWith("POST /_reminders/check")) && remCalls.some((c) => c.startsWith("POST /_reminders/remove")));
+  ok("26 Apple Reminders: without reminderList the list's own name", (await (async () => { remCalls.length = 0; await rp.items({ name: "Haushalt", provider: "icloud" }); return remCalls[0]; })()).includes("list=Haushalt"));
+  ok("27 Apple Reminders: a session Apple ended → the service's message (sign in again)", /sign in again/.test(await fails(() => rp.items({ name: "Signed out", provider: "icloud" }))));
+  remServer.close();
+  process.env.OPENSKY_CALENDAR_PORT = "9";
+  ok("28 Apple Reminders: the calendar service not running → says so", /calendar service/.test(await fails(() => rp.items(shared))));
+
   fs.rmSync(tmp, { recursive: true, force: true });
+
   console.log(`SUMMARY pass=${passed} fail=${failed}`);
 })().catch((e) => { console.log(`SUMMARY pass=${passed} fail=${failed + 1} (crashed: ${e.message})`); process.exit(1); });

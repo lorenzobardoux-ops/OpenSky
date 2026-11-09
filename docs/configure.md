@@ -231,7 +231,20 @@ In `opensky.json`: `{ "name": "Shared", "type": "caldav", "color": "green" }`. T
 - **Home Assistant** (`"provider": "homeassistant", "entity": "todo.shopping_list"`): any Home Assistant to-do list
   (the built-in Shopping List, Local To-do, Google Tasks or others connected to HA). Put your HA address and a
   long-lived access token (HA → your profile → Security) in `secrets.json → homeassistant.url / .token`.
-- Home shows the first three lists; the **Lists** page shows them all (`columns` fit across, more scroll sideways). Tap **Add item** to add, tap the circle to check off (with Undo), or tap an item to edit or delete it.
+- **Apple Reminders** (`"provider": "icloud"`, optional `"reminderList": "…"` = its name in Reminders, default the
+  list's name): a Reminders list of your Apple ID — also one you share with family. Add, check off, rename and delete
+  on the screen change it in Reminders on every iPhone, and the other way round (checked every `refreshMinutes`).
+  - Set it up on the phone page: Lists → Add a list → Kept in **Reminders** → sign in with your Apple ID and password,
+    type the code Apple shows on your devices, pick the list. The password is only used for that sign-in and never
+    saved; the Pi keeps Apple's session in `config/icloud-session/` (private, not in backups). Apple ends it after
+    about two months — the list then says to sign in again from the phone.
+  - Only lists of the signed-in Apple ID: a list someone else created and shares with you lives in their account and
+    can't be reached. Create the list with your Apple ID and share it with them instead.
+  - Apple has no official way in for this (CalDAV doesn't see today's shared Reminders), so OpenSky uses the same
+    one as icloud.com, through pyicloud. If Apple changes it, only these lists stop, with a message. With *Advanced
+    Data Protection* on, allow "Access iCloud Data on the Web" in your iPhone's iCloud settings.
+- Home shows
+ the first three lists; the **Lists** page shows them all (`columns` fit across, more scroll sideways). Tap **Add item** to add, tap the circle to check off (with Undo), or tap an item to edit or delete it.
 
 ## Photos
 ```json

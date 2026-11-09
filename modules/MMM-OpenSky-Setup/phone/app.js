@@ -402,38 +402,88 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
     }], [osT("Done"), "primary", () => { c.color = color; change(); render(); }]]);
   }
 
+  // Apple Reminders: sign in (Apple ID + password, then the code Apple shows on your devices), then — when onpick is
+  // given — pick one of the account's lists. The password only passes through to the Pi for this sign-in; it's never
+  // kept (the Pi keeps Apple's session, like a browser you told to trust).
+  function icloudBox(picked, onpick) {
+    const st = { status: null, step: "id", appleId: "", password: "", code: "", lists: null, busy: false, err: "", again: false };
+    const box = el("div", { class: "gbox" });
+    const run = async (fn) => { st.busy = true; st.err = ""; draw(); try { await fn(); } catch (e) { st.err = e.message; } st.busy = false; draw(); };
+    const loadLists = () => run(async () => { st.lists = (await api("GET", "/api/icloud/lists")).lists || []; if (onpick && st.lists.length && !st.lists.some((l) => l.title === picked())) onpick(st.lists[0].title); });
+    const draw = () => {
+      box.replaceChildren();
+      if (!st.status) { box.append(el("p", { class: "hint" }, osT("Checking Apple Reminders…"))); return; }
+      if (st.status.available === false) box.append(el("p", { class: "err" }, osT("Apple Reminders needs an update of OpenSky's helper — run ./install.sh on the Pi")));
+      else if (st.status.signedIn && st.step !== "code" && !st.again) {
+        box.append(el("p", { class: "good-note" }, osT("Signed in to Apple Reminders as {appleId} ✓", { appleId: st.status.appleId })));
+        if (onpick) {
+          if (!st.lists && !st.busy && !st.err) loadLists();
+          if (st.lists) box.append(field(osT("Which Reminders list?"), select(st.lists.map((l) => [l.title, l.title]), picked(), (v) => onpick(v)),
+            osT("Lists of this Apple ID, also ones it shares. A list someone else created and shares with you can't be reached — create it with this Apple ID and share it the other way round.")));
+        }
+        box.append(el("button", { type: "button", class: "btn small", onclick: () => { st.again = true; st.step = "id"; draw(); } }, osT("Sign in again")));
+      } else if (st.step === "code") {
+        box.append(el("p", { class: "hint" }, st.sms ? osT("Apple has sent you a code by text message. Type it here:") : osT("Apple shows a code on your iPhone, iPad or Mac (tap Allow first). Type it here:")),
+          field(osT("Code"), text(st.code, (v) => { st.code = v; }, { inputmode: "numeric", autocomplete: "one-time-code", maxlength: "7" })),
+          el("button", { type: "button", class: "btn primary block", disabled: st.busy, onclick: () => run(async () => {
+            await api("POST", "/api/icloud/code", { code: st.code });
+            st.password = ""; st.code = ""; st.step = "id"; st.again = false; st.lists = null;
+            st.status = await api("GET", "/api/icloud");
+          }) }, st.busy ? osT("One moment…") : osT("Confirm")));
+      } else {
+        box.append(el("p", { class: "hint" }, osT("Your Apple ID password is only used for this sign-in and isn't saved. Apple then trusts this screen for about two months; after that it asks you to sign in here again.")),
+          field(osT("Apple ID (email)"), text(st.appleId || st.status.appleId, (v) => { st.appleId = v.trim(); }, { inputmode: "email", autocapitalize: "off", autocomplete: "username" })),
+          field(osT("Apple ID password"), el("input", { type: "password", class: "input", autocomplete: "current-password", value: st.password, oninput: (e) => { st.password = e.target.value; } })),
+          el("button", { type: "button", class: "btn primary block", disabled: st.busy, onclick: () => run(async () => {
+            const r = await api("POST", "/api/icloud/signin", { appleId: st.appleId || st.status.appleId, password: st.password });
+            st.password = "";
+            if (r.state === "2fa") { st.step = "code"; st.sms = !!r.sms; } else { st.again = false; st.lists = null; st.status = await api("GET", "/api/icloud"); }
+          }) }, st.busy ? osT("Signing in…") : osT("Sign in to Apple")));
+      }
+      if (st.err) box.append(el("p", { class: "err" }, st.err));
+    };
+    api("GET", "/api/icloud").then((s) => { st.status = s; draw(); }, (e) => { st.status = { signedIn: false }; st.err = e.message; draw(); });
+    draw();
+    return box;
+  }
+
   function listsCard() {
     const L = S.lists, rows = el("div", { class: "rows" });
-    const where = (l) => l.provider === "todoist" ? `Todoist${l.project && l.project !== l.name ? " · " + osT("project “{project}”", { project: l.project }) : ""}` : l.provider === "homeassistant" ? `Home Assistant · ${l.entity || "?"}` : osT("On this screen");
+    const where = (l) => l.provider === "icloud" ? `${osT("Apple Reminders")} · „${l.reminderList || l.name}“` : l.provider === "todoist" ? `Todoist${l.project && l.project !== l.name ? " · " + osT("project “{project}”", { project: l.project }) : ""}` : l.provider === "homeassistant" ? `Home Assistant · ${l.entity || "?"}` : osT("On this screen");
     L.lists.forEach((l, i) => rows.append(row(hex(l.color || "blue"), l.name, where(l), () => editList(i))));
     if (!L.lists.length) rows.append(el("p", { class: "empty" }, osT("No lists yet.")));
-    const usesTodoist = L.lists.some((l) => l.provider === "todoist"), usesHA = L.lists.some((l) => l.provider === "homeassistant");
+    const usesTodoist = L.lists.some((l) => l.provider === "todoist"), usesHA = L.lists.some((l) => l.provider === "homeassistant"), usesICloud = L.lists.some((l) => l.provider === "icloud");
     return section("lists", "lists", osT("Lists"), osT("Groceries, to-dos… the first three show on Home"),
       rows,
       el("button", { type: "button", class: "add", onclick: addList }, icon("plus"), osT("Add a list")),
+      usesICloud ? el("div", { class: "field" }, el("span", { class: "label" }, osT("Apple Reminders")), icloudBox()) : null,
       usesTodoist ? field(osT("Todoist API token"), secretInput("lists.todoist.token", osT("Paste your token")), osT("Todoist → Settings → Integrations → Developer → API token.")) : null,
       usesHA ? field(osT("Home Assistant address"), secretInput("homeassistant.url", "http://homeassistant.local:8123")) : null,
       usesHA ? field(osT("Home Assistant token"), secretInput("homeassistant.token", osT("Paste a long-lived access token")), osT("In Home Assistant: your profile → Security → Long-lived access tokens → Create token.")) : null);
   }
 
   function addList() {
-    const d = { name: "", color: COLORS[(S.lists.lists.length + 3) % COLORS.length], provider: "local", project: "", entity: "" };
+    const d = { name: "", color: COLORS[(S.lists.lists.length + 3) % COLORS.length], provider: "local", project: "", entity: "", reminderList: "" };
     const err = el("p", { class: "err" });
     sheet(osT("Add a list"), (b) => {
       const extra = el("div");
       const draw = () => extra.replaceChildren(...(d.provider === "todoist" ? [field(osT("Todoist project"), text(d.project, (v) => { d.project = v.trim(); }, { placeholder: osT("Same as the list's name if empty") }))]
+        : d.provider === "icloud" ? [icloudBox(() => d.reminderList, (v) => { d.reminderList = v; })]
         : d.provider === "homeassistant" ? [field(osT("Home Assistant to-do list"), text(d.entity, (v) => { d.entity = v.trim().toLowerCase(); }, { placeholder: "todo.shopping_list", autocapitalize: "off" }), osT("Its entity ID (Settings → Entities in Home Assistant). Address and token go below the lists."))]
         : [el("p", { class: "hint" }, osT("Kept on the Pi — no account needed."))]));
-      b.append(field(osT("Name"), text("", (v) => { d.name = v.trim(); }, { placeholder: osT("e.g. Groceries") })),
+      b.append(field(osT("Name"), text("", (v) => { d.name = v.trim(); }, { placeholder: osT("e.g. Groceries") }), osT("On the screen. Empty with Apple Reminders: the list's name there.")),
         colorField(d.color, (c) => { d.color = c; }),
-        field(osT("Kept in"), seg([["local", osT("This screen")], ["todoist", "Todoist"], ["homeassistant", "Home Assistant"]], d.provider, (v) => { d.provider = v; draw(); })), extra, err);
+        field(osT("Kept in"), seg([["local", osT("This screen")], ["todoist", "Todoist"], ["homeassistant", "Home Assistant"], ["icloud", osT("Reminders")]], d.provider, (v) => { d.provider = v; draw(); })), extra, err);
       draw();
     }, [[osT("Cancel"), "", () => {}], [osT("Add"), "primary", () => {
-      const bad = nameOk(d.name, S.lists.lists.map((l) => l.name)) || (d.provider === "homeassistant" && !/^todo\.[a-z0-9_]+$/.test(d.entity) ? osT("The list's entity ID looks like todo.shopping_list") : null);
+      if (d.provider === "icloud" && !d.name) d.name = d.reminderList;
+      const bad = (d.provider === "icloud" && !d.reminderList ? osT("Sign in to Apple and pick a list first") : null) || nameOk(d.name, S.lists.lists.map((l) => l.name)) || (d.provider === "homeassistant" && !/^todo\.[a-z0-9_]+$/.test(d.entity) ? osT("The list's entity ID looks like todo.shopping_list") : null);
       if (bad) { err.textContent = bad; return false; }
       const l = { name: d.name, color: d.color };
       if (d.provider === "todoist") { l.provider = "todoist"; if (d.project && d.project !== d.name) l.project = d.project; }
       if (d.provider === "homeassistant") { l.provider = "homeassistant"; l.entity = d.entity; }
+      if (d.provider === "icloud") { l.provider = "icloud"; if (d.reminderList !== d.name) l.reminderList = d.reminderList; }
+
       S.lists.lists.push(l);
       if (!S.pages.includes("lists") && S.lists.lists.length > 3) S.pages.splice(Math.min(3, S.pages.length), 0, "lists");
       change(); render();
@@ -445,7 +495,9 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
     let color = l.color || "blue";
     sheet(l.name, (b) => {
       b.append(colorField(color, (v) => { color = v; }));
-      if (l.provider !== "todoist") b.append(el("p", { class: "hint" }, osT("Removing the list takes it off the screen; its items stay saved on the Pi.")));
+      if (!l.provider || l.provider === "local") b.append(el("p", { class: "hint" }, osT("Removing the list takes it off the screen; its items stay saved on the Pi.")));
+      if (l.provider === "icloud") b.append(el("p", { class: "hint" }, osT("Removing it here only takes it off the screen; the list stays in Apple Reminders.")));
+
     }, [[osT("Remove"), "danger", () => { S.lists.lists.splice(i, 1); change(); render(); }], [osT("Done"), "primary", () => { l.color = color; change(); render(); }]]);
   }
 

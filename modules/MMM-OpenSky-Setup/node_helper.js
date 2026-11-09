@@ -14,6 +14,9 @@
  *   POST /api/pair {code} · GET /api/state · POST /api/save {settings, secrets} · GET /api/geocode?q= · POST /api/done
  *   Google Calendar sign-in: GET /api/google · POST /api/google/start {clientId?, clientSecret?} → {url}
  *     · POST /api/google/finish {address} → {calendars} · GET /api/google/calendars
+ *   Apple Reminders sign-in (lists): GET /api/icloud · POST /api/icloud/signin {appleId, password} → {state: ok | 2fa}
+ *     · POST /api/icloud/code {code} · GET /api/icloud/lists · POST /api/icloud/signout — handed to the calendar
+ *     service on this Pi (services/calendar-service/reminders.py); the password only passes through, it's never kept
  *   GET /api/music/speakers → {speakers: [{id, name, state}]} (Home Assistant media players, for the Music page)
  *   GET /api/backup[?secrets=1] (a download: settings + on-device data, passwords only when asked) · POST /api/restore {backup}
  */
@@ -297,7 +300,24 @@ module.exports = NodeHelper.create({
       }
     }
 
+    // Apple Reminders: the calendar service does the signing in and keeps the session (never the password)
+    const ICLOUD = { "GET /api/icloud": "status", "POST /api/icloud/signin": "signin", "POST /api/icloud/code": "code", "GET /api/icloud/lists": "lists", "POST /api/icloud/signout": "signout" };
+    const icloudOp = ICLOUD[`${req.method} ${url.pathname}`];
+    if (icloudOp) {
+      const body = req.method === "POST" ? await this.body(req) : undefined;
+      const port = Number(process.env.OPENSKY_CALENDAR_PORT) || Number(((readJson(SETTINGS, {}).calendar || {}).service || {}).port) || 5747;
+      try {
+        const r = await fetch(`http://127.0.0.1:${port}/_reminders/${icloudOp}`, body === undefined ? { signal: AbortSignal.timeout(60000) }
+          : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) });
+        const d = await r.json().catch(() => ({}));
+        if (icloudOp === "code" && r.ok) console.log("[OpenSky] phone setup: signed in to Apple Reminders");
+        return this.send(res, r.status, d);
+      } catch (e) {
+        return this.send(res, 502, { error: osT("Can't reach the calendar service. Try again in a minute.") });
+      }
+    }
     if (url.pathname === "/api/google" && req.method === "GET") {
+
       const g = readJson(SECRETS, {}).google || {};
       return this.send(res, 200, { clientSet: !!(g.clientId && g.clientSecret), signedIn: !!g.refreshToken, redirect: google.REDIRECT });
     }

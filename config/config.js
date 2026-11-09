@@ -96,9 +96,10 @@ else if (/^[A-Za-z]{2}$/.test(cal.holidays || "")) calendarSources.push({ name: 
 // Lists (groceries, to-dos…): on-device by default; Todoist with a token in secrets.json
 const listSettings = s.lists || {};
 const familyLists = (Array.isArray(listSettings.lists) ? listSettings.lists : []).filter((l) => l && l.name)
-  .map((l) => ({ name: String(l.name), color: l.color || null, provider: ["todoist", "homeassistant"].includes(l.provider) ? l.provider : "local",
+  .map((l) => ({ name: String(l.name), color: l.color || null, provider: ["todoist", "homeassistant", "icloud"].includes(l.provider) ? l.provider : "local",
     ...(l.project ? { project: String(l.project) } : {}), ...(l.projectId ? { projectId: String(l.projectId) } : {}),
-    ...(l.entity ? { entity: String(l.entity) } : {}) }));
+    ...(l.entity ? { entity: String(l.entity) } : {}), ...(l.reminderList ? { reminderList: String(l.reminderList) } : {}) }));
+
 // Trash / recycling days from a calendar link (many cities and ReCollect publish one): opensky.json → pickup.url,
 // or a private one in secrets.json → calendar.sources.Pickup (with pickup.url: "secret")
 const pk = s.pickup || {};

@@ -24,9 +24,9 @@ MagicMirror². This file is the entry point; read it first, then the docs it poi
 ## Where things are on an installed Pi
 | What | Where |
 |---|---|
-| The user's settings + data (back this up) | `~/OpenSky/config/`: `opensky.json`, `secrets.json` (chmod 600), `device.json` (Settings panel), `local-calendar.json`, `lists.json`, `calendar-cache/` |
+| The user's settings + data (back this up) | `~/OpenSky/config/`: `opensky.json`, `secrets.json` (chmod 600), `device.json` (Settings panel), `local-calendar.json`, `lists.json`, `calendar-cache/`, `icloud-session/` (Apple Reminders sign-in; not backed up) |
 | Runtime (re-creatable by `./install.sh`) | `~/.local/share/opensky/`: `MagicMirror/` (pinned tag, OpenSky linked in by `tools/link-mm.sh`), `node/` (only if the system Node is too old), `venv/` |
-| Services | systemd **user** units `opensky.service` (Electron) + `opensky-calendar.service` (CalDAV helper); started by `~/.config/autostart/opensky.desktop` |
+| Services | systemd **user** units `opensky.service` (Electron) + `opensky-calendar.service` (CalDAV helper + Apple Reminders, `services/calendar-service`); started by `~/.config/autostart/opensky.desktop` |
 | Commands | `opensky status · logs · check · restart · edit · secrets · update · pull-hook on\|off` (`tools/opensky`) |
 | A Pi on its own branch (a fork) | `git pull` instead of `opensky update` (which refuses there); `opensky pull-hook on` makes git's post-merge hook run `tools/after-pull.sh` (install.sh when needed, then restart) — see `docs/install.md` |
 

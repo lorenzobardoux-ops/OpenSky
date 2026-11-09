@@ -11,6 +11,7 @@ config/*.local.*
 node_modules/
 **/data/cache/
 config/calendar-cache/
+config/icloud-session/
 config/local-calendar.json*
 config/lists.json*
 config/device.json*
