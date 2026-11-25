@@ -6,6 +6,9 @@ timers, photos, weather and smart-home controls on one screen. Built on [MagicMi
 
 > **v1.0** — what's in it: [CHANGELOG.md](CHANGELOG.md). Where it's heading: [PLAN.md](PLAN.md).
 
+> **This is a fork** of [CosmoJM/OpenSky](https://github.com/CosmoJM/OpenSky) with its own additions on the branch
+> **`meine-anpassungen`** (see [below](#this-forks-additions)). The Pi follows that branch and updates with `git pull`.
+
 **Watch the intro video** (YouTube):
 
 [![OpenSky intro video on YouTube](https://img.youtube.com/vi/qnbN82BGLP4/maxresdefault.jpg)](https://www.youtube.com/watch?v=qnbN82BGLP4)
@@ -32,16 +35,52 @@ timers, photos, weather and smart-home controls on one screen. Built on [MagicMi
 - **Add-on — Music:** the screen becomes an AirPlay and Spotify speaker, with a Music page
   ([docs/music.md](docs/music.md)): `opensky addon music`.
 
+## This fork's additions
+- **German** screen, phone page and messages (`locale.language: "de"`, dates like 08.11.2026, a QWERTZ keyboard with
+  ä ö ü ß) — set it on the phone page: Family → Language.
+- **Formula 1** in the header: the next race weekend with qualifying, sprint and race times in German time.
+- **Apple Reminders** lists (also ones shared with family), signed in from the phone page.
+- **Event templates** on Home instead of the photos: standard events to drag onto a day, in their own color, into
+  one or several calendars (shown once).
+- Settings and lists scroll with a finger drag; the Timer's boxes open a number pad.
+- Updates with a plain `git pull` on the Pi (below). Details for every setting: [docs/configure.md](docs/configure.md).
+
 ## Install
 On a Raspberry Pi 4/5 with Raspberry Pi OS (64-bit, desktop) and a touchscreen:
 ```bash
-git clone https://github.com/CosmoJM/OpenSky.git ~/OpenSky && cd ~/OpenSky && ./install.sh
+git clone -b meine-anpassungen https://github.com/lorenzobardoux-ops/OpenSky.git ~/OpenSky && cd ~/OpenSky && ./install.sh
 ```
+Then, once, so a `git pull` restarts OpenSky with the new files by itself:
+```bash
+opensky pull-hook on
+```
+
 Step by step: [docs/install.md](docs/install.md) · settings: [docs/configure.md](docs/configure.md) ·
 Google Calendar with editing: [docs/google-calendar.md](docs/google-calendar.md) ·
 help: [docs/troubleshooting.md](docs/troubleshooting.md)
 
+## Updating (in the console)
+Open a Terminal on the Pi (or connect with `ssh`) and run:
+```bash
+cd ~/OpenSky && git pull
+```
+That's all: with the pull hook on (above), OpenSky sets up what changed (`./install.sh` when needed — a new module,
+the services, new Python parts) and restarts by itself. Without the hook, restart it yourself:
+```bash
+opensky restart
+```
+- Check it's running: `opensky status` · its log: `opensky logs` · the settings files: `opensky check`.
+- `opensky update` doesn't apply here: it would switch to the original project's release and leave this branch (it
+  refuses and says to `git pull` instead).
+- A Pi that still points at the original project: switch it once to this fork's branch —
+  `git remote set-url origin https://github.com/lorenzobardoux-ops/OpenSky.git && git fetch origin && git checkout -B meine-anpassungen --track origin/meine-anpassungen`
+  — then `opensky pull-hook on`. Your settings in `config/` stay as they are.
+- Bring the original project's new versions into this fork (on a computer with the repository, not on the Pi):
+  `git remote add upstream https://github.com/CosmoJM/OpenSky.git` (once), then
+  `git checkout meine-anpassungen && git pull upstream main && git push`; the Pi then gets them with `git pull`.
+
 ## Docs
+
 - **For people:** [`docs/`](docs/README.md).
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md).
 - **For AI assistants:** start with [`AGENTS.md`](AGENTS.md).
