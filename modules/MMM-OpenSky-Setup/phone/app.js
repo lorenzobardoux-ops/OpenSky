@@ -645,15 +645,44 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
   function mealFields() {
     if (!S.pages.includes("meals")) return [];
     S.meals = S.meals && typeof S.meals === "object" ? S.meals : {};
+    // how the Bring! account was made: e-mail, or "Sign in with Apple" (maybe with "Hide My Email")
+    const apple = el("div", { class: "gbox" },
+      el("p", {}, el("b", {}, osT("Signed up to Bring! with Apple?"))),
+      el("ol", { class: "steps" },
+        el("li", {}, osT("In the Bring! app: Profile — the e-mail address shown there is your Bring! login (with \"Hide My Email\" it's an address like …@privaterelay.appleid.com, or one Bring! made for you).")),
+        el("li", {}, osT("Still in the Bring! app: Profile → Settings → More settings → Change password — set a password (this doesn't change how you sign in on the phone).")),
+        el("li", {}, osT("Type that address and that password below, Save, then Test the connection."))),
+      el("p", { class: "hint" }, osT("Signing in with Apple itself can't be done from the screen: Apple only gives that sign-in to Bring!'s own apps.")));
+    const showApple = (how) => { apple.hidden = how !== "apple"; };
+    showApple(S.meals.bringLogin);
+    const test = el("button", { type: "button", class: "btn block", onclick: async (e) => {
+      if (Object.keys(pending).some((k) => k.startsWith("bring."))) return toast(osT("Save first, then test the connection"), "bad");
+      const b = e.currentTarget; b.disabled = true; b.textContent = osT("Testing…");
+      try { const r = await api("GET", "/api/bring/test"); toast(osT("Connected ✓ Bring! lists: {lists}", { lists: r.lists.join(", ") || "—" }), "good"); }
+      catch (x) { toast(x.message, "bad"); }
+      b.disabled = false; b.textContent = osT("Test the connection");
+    } }, osT("Test the connection"));
     return [
       el("h4", { class: "sub-title" }, osT("Meal planner")),
       el("p", { class: "hint" }, osT("Dishes and the week's plan are on the kitchen page — no code needed: on the screen, the Meals page shows its QR code.")),
-      field(osT("Bring! e-mail"), secretInput("bring.email", osT("The e-mail you sign in to Bring! with"))),
+      field(osT("You sign in to Bring! with"), seg([["email", osT("E-mail")], ["apple", "Apple"]], S.meals.bringLogin === "apple" ? "apple" : "email", (v) => {
+        if (v === "apple") S.meals.bringLogin = "apple"; else delete S.meals.bringLogin;
+        change(); showApple(v);
+      })),
+      apple,
+      // (visible while typing — a long …@privaterelay.appleid.com address is easy to get wrong; it's kept only on the Pi)
+      field(osT("Bring! e-mail"), el("input", { type: "email", class: "input", autocomplete: "off", autocapitalize: "off", spellcheck: "false", inputmode: "email",
+        placeholder: isSet("bring.email") ? osT("Saved ✓ — type to replace") : osT("The e-mail you sign in to Bring! with"), oninput: (e) => setSecret("bring.email", e.target.value.trim()) }),
+      osT("Apple: the address from Bring! → Profile.")),
+
       field(osT("Bring! password"), secretInput("bring.password", osT("Your Bring! password")),
         osT("Bring! has no keys for other apps, so the Pi keeps this password (in secrets.json, only on the Pi) to put the shopping list on your Bring! list. It's an unofficial way in: if Bring! changes it, only that stops.")),
+
       field(osT("Bring! list"), el("input", { type: "text", class: "input", value: S.meals.bringList || "", placeholder: osT("Empty: your default list"),
-        oninput: (e) => { const v = e.target.value.trim(); if (v) S.meals.bringList = v; else delete S.meals.bringList; change(); } }))
+        oninput: (e) => { const v = e.target.value.trim(); if (v) S.meals.bringList = v; else delete S.meals.bringList; change(); } })),
+      test
     ];
+
 
   }
 

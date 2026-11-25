@@ -317,7 +317,15 @@ module.exports = NodeHelper.create({
         return this.send(res, 502, { error: osT("Can't reach the calendar service. Try again in a minute.") });
       }
     }
+    // Bring! (meal planner): sign in with the saved e-mail + password and name the lists — "Test the connection"
+    if (url.pathname === "/api/bring/test" && req.method === "GET") {
+      const bring = require(path.join(__dirname, "..", "..", "lib", "bring.js"));
+      bring._reset();   // (the saved values as they are now, not an earlier sign-in)
+      try { return this.send(res, 200, { lists: (await bring.lists()).map((l) => l.name) }); }
+      catch (e) { return this.send(res, 400, { error: e.message }); }
+    }
     if (url.pathname === "/api/google" && req.method === "GET") {
+
 
       const g = readJson(SECRETS, {}).google || {};
       return this.send(res, 200, { clientSet: !!(g.clientId && g.clientSecret), signedIn: !!g.refreshToken, redirect: google.REDIRECT });

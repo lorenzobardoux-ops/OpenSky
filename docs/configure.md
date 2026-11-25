@@ -288,7 +288,14 @@ A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on
   what's at home.
 - **Bring!:** "Send to Bring!" (on the screen or the kitchen page) asks first, then puts every unticked ingredient
   with its amount on your Bring! list (`meals.bringList`, empty = the account's default list). Set your Bring! e-mail
-  and password on the phone setup page → Extras (kept in `secrets.json → bring.email / bring.password`). Bring! has
+  and password on the phone setup page → Extras (kept in `secrets.json → bring.email / bring.password`), then
+  **Test the connection**.
+  - **Signed up to Bring! with Apple** (also with *Hide My Email*): Apple only lets Bring!'s own apps sign in with
+    Apple, so OpenSky uses the account's address and a password instead. In the Bring! app: **Profile** shows the
+    account's address (with Hide My Email something like `…@privaterelay.appleid.com`, or one Bring! made);
+    **Profile → Settings → More settings → Change password** sets a password (signing in with Apple on the phone
+    stays as it is). Put both in phone setup → Extras (choose "Apple" there for these steps).
+ Bring! has
   no official way in for this; OpenSky uses the same unofficial one as Home Assistant's Bring! integration — if
   Bring! changes it, only sending stops, with a message.
 - Kept in `config/meals.json` (in backups).

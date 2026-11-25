@@ -41,8 +41,11 @@ const server = http.createServer((req, res) => {
   ok("1 not set up: says where to add it", /phone setup/.test(await fails(() => bring.add([{ name: "Milch" }]))) && !bring.configured());
   setSecrets({ bring: { email: "fam@example.test", password: "wrong" } });
   ok("2 a wrong password: plain message", /didn't accept/.test(await fails(() => bring.add([{ name: "Milch" }]))));
+  setSecrets({ bring: { email: "x1y2z3@privaterelay.appleid.com", password: "nope" } });
+  ok("2b an account made with Apple (Hide My Email address) that isn't accepted: says how to set a password in the Bring! app", /Change password/.test(await fails(() => bring.add([{ name: "Milch" }]))) && bring.appleAddress("A@PrivateRelay.AppleID.com"));
   setSecrets({ bring: { email: "fam@example.test", password: "right" } });
-  let r = await bring.add([{ name: "Milch", spec: "400 ml" }, { name: " Eier ", spec: "6" }, { name: "" }]);
+  let r =
+ await bring.add([{ name: "Milch", spec: "400 ml" }, { name: " Eier ", spec: "6" }, { name: "" }]);
   ok("3 no list named: the account's default list; items with their amounts, to buy", r.list === "Einkauf" && r.count === 2 && items.L2.map((c) => `${c.itemId}:${c.spec}:${c.operation}`).join() === "Milch:400 ml:TO_PURCHASE,Eier:6:TO_PURCHASE", items.L2);
   r = await bring.add([{ name: "Mehl", spec: "1 kg" }], "zuhause");
   ok("4 a list by its name (any case)", r.list === "Zuhause" && items.L1[0].itemId === "Mehl");
