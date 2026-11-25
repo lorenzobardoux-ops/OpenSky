@@ -305,7 +305,8 @@ const fixed = [
     config: {
       pages: pages.map((key, index) => ({ key, index, label: (PAGE_INFO[key] || {}).label || key, icon: (PAGE_INFO[key] || {}).icon || key })),
       familyInitial: (familyName.replace(/^the\s+/i, "")[0] || "H").toUpperCase(),
-      idleReturnMinutes: (s.sidebar && Number.isFinite(s.sidebar.idleReturnMinutes)) ? s.sidebar.idleReturnMinutes : 5,
+      idleReturnMinutes: (s.sidebar && Number.isFinite(s.sidebar.idleReturnMinutes)) ? s.sidebar.idleReturnMinutes : 10,
+
       screenServiceUrl: (s.screen && s.screen.serviceUrl) || null,
       showSettings: true,
       accent: accentOf(s.look && s.look.accent),

@@ -44,6 +44,23 @@ module.exports = NodeHelper.create({
     this.startKitchen();
     // a change from anywhere (kitchen page, screen) → the screen shows it
     meals.on("change", () => this.pushState());
+    // what was put on the Bring! list and bought there gets ticked here: checked every 2 minutes while anything waits
+    setInterval(() => this.syncBring(), Number(process.env.OPENSKY_BRING_SYNC_MS) || 2 * 60 * 1000);
+    setTimeout(() => this.syncBring(), 15 * 1000);
+  },
+
+  async syncBring() {
+    if (this.syncing || !bring.configured()) return;
+    if (!Object.keys(meals.waitingOnBring()).length) return;
+    this.syncing = true;
+    try {
+      const n = meals.syncBought(await bring.toBuyNames(this.bringList));
+      if (n) console.log(`[OpenSky] meals: ${n} items bought in Bring! — ticked`);
+    } catch (e) {
+      // (quietly: the next check tries again; sending shows a problem with Bring! to whoever sends)
+      if (e.message !== this.lastSyncError) console.error(`[OpenSky] meals: Bring! check: ${e.message}`);
+      this.lastSyncError = e.message;
+    } finally { this.syncing = false; }
   },
 
   socketNotificationReceived(n, p) {
@@ -53,6 +70,8 @@ module.exports = NodeHelper.create({
       this.pushState();
       return;
     }
+    if (n === "OS_MEALS_LOOK") { if (Date.now() - (this.lastLook || 0) > 30000) { this.lastLook = Date.now(); this.syncBring(); } return; }
+
 
     if (n === "OS_MEALS_CALL" && p && p.id) {
       this.run(p.op, p.body || {}).then(
@@ -66,8 +85,10 @@ module.exports = NodeHelper.create({
     if (op === "bring") {
       const items = meals.toBuy(body.weekStart);
       const r = await bring.add(items, this.bringList);
+      meals.markSent(body.weekStart, items);   // bought there → ticked here (syncBring)
       console.log(`[OpenSky] meals: ${r.count} items sent to Bring!`);
       return { sent: r };
+
     }
     return { state: meals.change(op, body) };
   },
@@ -135,7 +156,12 @@ module.exports = NodeHelper.create({
     }
     if (!url.pathname.startsWith("/api/")) return this.send(res, 404, { error: osT("Not found") });
     if (req.method === "POST" && req.headers["x-opensky"] !== "1") return this.send(res, 403, { error: osT("Refused") });
-    if (url.pathname === "/api/state" && req.method === "GET") return this.send(res, 200, { ...meals.state(), bring: bring.configured() });
+    if (url.pathname === "/api/state" && req.method === "GET") {
+      // someone looks at the list: a fresh look at Bring! too (at most every 30 s)
+      if (Date.now() - (this.lastLook || 0) > 30000) { this.lastLook = Date.now(); this.syncBring(); }
+      return this.send(res, 200, { ...meals.state(), bring: bring.configured() });
+    }
+
     if (url.pathname === "/api/change" && req.method === "POST") {
       const { op, body } = await this.body(req);
       if (op === "bring") return this.send(res, 400, { error: osT("Unknown change") });

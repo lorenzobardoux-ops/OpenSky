@@ -30,6 +30,8 @@ const server = http.createServer((req, res) => {
     if (req.url === "/bringusers/U1/lists") return send(200, { lists: [{ listUuid: "L1", name: "Zuhause" }, { listUuid: "L2", name: "Einkauf" }] });
     const m = req.url.match(/^\/v2\/bringlists\/(L\d)\/items$/);
     if (m && req.method === "PUT") { JSON.parse(body).changes.forEach((c) => items[m[1]].push(c)); res.writeHead(204); return res.end(); }
+    const g = req.url.match(/^\/v2\/bringlists\/(L\d)$/);
+    if (g && req.method === "GET") return send(200, { uuid: g[1], status: "SHARED", items: { purchase: [{ itemId: "Milch", specification: "400 ml" }], recently: [{ itemId: "Eier", specification: "6" }] } });
     send(404, {});
   });
 });
@@ -55,6 +57,8 @@ const server = http.createServer((req, res) => {
   r = await bring.add([{ name: "Butter" }]);
   ok("6 a token Bring! ended: signs in again once, then it works", r.count === 1 && calls.filter((c) => c.includes("bringauth")).length === logins + 1);
   ok("7 nothing to add: nothing sent", (await bring.add([])).count === 0);
+  ok("7b what's still to buy on the list (not the recently bought)", JSON.stringify(await bring.toBuyNames()) === '["Milch"]');
+
   server.close();
   bring._reset();
   process.env.OPENSKY_BRING_API = "http://127.0.0.1:9/";

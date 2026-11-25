@@ -37,3 +37,4 @@
 .ing .icat { grid-column: 1 / 4; min-height: 38px; font-size: 14px; }
 .ing .mini { grid-row: 1; grid-column: 4; width: 34px; height: 44px; border: 0; border-radius: 10px; background: #f3efec; font-size: 20px; }
 .ing .input { min-width: 0; }
+.badge { flex: none; padding: 2px 8px; border-radius: 999px; background: #fde8e7; color: #c62828; font-size: 12px; font-weight: 800; }

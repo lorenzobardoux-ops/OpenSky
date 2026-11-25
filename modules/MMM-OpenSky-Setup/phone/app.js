@@ -543,7 +543,13 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
           el("button", { type: "button", class: "mini", "aria-label": osT("Down"), disabled: i === S.pages.length - 1, onclick: () => { S.pages.splice(i, 1); S.pages.splice(i + 1, 0, k); change(); render(); }, html: ICON.down })) : null,
         toggle(on, (v) => { if (v) S.pages.push(k); else if (S.pages.length > 1) S.pages.splice(S.pages.indexOf(k), 1); change(); render(); }, names[k])));
     });
-    return section("pages", "pages", osT("Pages"), osT("The buttons down the left side, top to bottom. The first is where the screen goes back to when idle."), box);
+    // back to the first page after this long without a touch (opensky.json → sidebar.idleReturnMinutes; default 10)
+    S.sidebar = S.sidebar && typeof S.sidebar === "object" ? S.sidebar : {};
+    const idle = Number.isFinite(S.sidebar.idleReturnMinutes) ? S.sidebar.idleReturnMinutes : 10;
+    return section("pages", "pages", osT("Pages"), osT("The buttons down the left side, top to bottom. The first is where the screen goes back to when idle."), box,
+      field(osT("Back to the first page after"), select([[2, osT("{n} minutes", { n: 2 })], [5, osT("{n} minutes", { n: 5 })], [10, osT("{n} minutes", { n: 10 })], [15, osT("{n} minutes", { n: 15 })], [30, osT("{n} minutes", { n: 30 })], [0, osT("never")]],
+        [2, 5, 10, 15, 30, 0].includes(idle) ? idle : 10, (v) => { S.sidebar.idleReturnMinutes = Number(v); change(); }), osT("Without a touch; a running timer keeps its page.")));
+
   }
 
   function webRow(k, e, sub, onclick, extra) {

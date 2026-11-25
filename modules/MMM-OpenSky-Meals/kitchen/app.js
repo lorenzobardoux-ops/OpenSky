@@ -195,12 +195,15 @@
     const card = el("section", { class: "card" }, el("header", { class: "card-head" }, el("div", {}, el("h2", {}, osT("Shopping")), el("p", {}, M.week(week, locale())))), weekSwitch());
     if (!p || !p.shopping.length) { card.append(el("p", { class: "empty" }, osT("Nothing to buy yet — plan the week first."))); return card; }
     card.append(el("p", { class: "hint" }, osT("Tick what's already at home.")));
-    let cat = null;
+    // still needed on top (by shop section), then what's at home or bought (in Bring! or ticked here)
+    let cat = null, done = false;
     for (const it of p.shopping) {
-      if (it.category !== cat) { cat = it.category; card.append(el("h4", { class: "sub-title" }, M.category(cat))); }
+      if (it.have && !done) { done = true; card.append(el("h4", { class: "sub-title" }, osT("Done — at home or bought"))); }
+      if (!it.have && it.category !== cat) { cat = it.category; card.append(el("h4", { class: "sub-title" }, M.category(cat))); }
       card.append(el("button", { type: "button", class: `shop-row${it.have ? " have" : ""}`, onclick: () => change("have", { weekStart: week, key: it.key, have: !it.have }) },
-        el("span", { class: "tick" }, it.have ? "✓" : ""), el("span", { class: "shop-name" }, it.name), el("span", { class: "shop-amt" }, M.amount(it))));
+        el("span", { class: "tick" }, it.have ? "✓" : ""), el("span", { class: "shop-name" }, it.name), it.inBring ? el("span", { class: "badge" }, osT("in Bring!")) : null, el("span", { class: "shop-amt" }, M.amount(it))));
     }
+
     const need = p.shopping.filter((it) => !it.have);
     card.append(S.bring
       ? el("button", { type: "button", class: "btn primary block", disabled: !need.length, onclick: () => sendToBring(need) }, osT("Put {n} on the Bring! list", { n: need.length }))

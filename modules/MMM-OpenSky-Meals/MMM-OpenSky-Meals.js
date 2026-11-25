@@ -34,7 +34,11 @@ Module.register("MMM-OpenSky-Meals", {
     } else if (n === "OS_MEALS_RESULT" && p && this.calls.has(p.id)) { const done = this.calls.get(p.id); this.calls.delete(p.id); done(p); }
   },
 
+  // the page comes into view: a fresh look at what was bought in Bring! (the node helper asks at most every 30 s)
+  resume() { this.sendSocketNotification("OS_MEALS_LOOK"); },
+
   notificationReceived(n) {
+
     if ((n === "OPENSKY_IDLE_RESET" || n === "PAGE_CHANGED") && this.popup) this.closePopup();
     if (n === "OPENSKY_IDLE_RESET" && this.view !== "plan") { this.view = "plan"; this.draw(); }
   },
@@ -143,12 +147,14 @@ Module.register("MMM-OpenSky-Meals", {
     const list = box.querySelector(".ml-shop-list");
     const need = p.shopping.filter((it) => !it.have);
     box.querySelector(".ml-shop-head small").textContent = osT("{n} of {all} still to buy", { n: need.length, all: p.shopping.length });
-    let cat = null;
+    // still needed on top (by shop section), then what's at home or bought — in Bring! or ticked here
+    let cat = null, done = false;
     for (const it of p.shopping) {
-      if (it.category !== cat) { cat = it.category; const h = document.createElement("div"); h.className = "ml-cat"; h.textContent = M.category(cat); list.appendChild(h); }
+      if (it.have && !done) { done = true; const h = document.createElement("div"); h.className = "ml-cat ml-done-head"; h.textContent = osT("Done — at home or bought"); list.appendChild(h); }
+      if (!it.have && it.category !== cat) { cat = it.category; const h = document.createElement("div"); h.className = "ml-cat"; h.textContent = M.category(cat); list.appendChild(h); }
       const row = document.createElement("button");
       row.className = "ml-item" + (it.have ? " have" : "");
-      row.innerHTML = `<span class="ml-tick"></span><span class="ml-name"></span><span class="ml-amt"></span>`;
+      row.innerHTML = `<span class="ml-tick"></span><span class="ml-name"></span>${it.inBring ? `<span class="ml-badge">${osT("in Bring!")}</span>` : ""}<span class="ml-amt"></span>`;
       row.querySelector(".ml-name").textContent = it.name;
       row.querySelector(".ml-amt").textContent = M.amount(it);
       row.onclick = () => this.change("have", { weekStart: ws, key: it.key, have: !it.have });

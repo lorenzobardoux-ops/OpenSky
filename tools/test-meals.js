@@ -65,7 +65,24 @@ ok("11 shopping list: scaled to the servings (Lasagne ×2), same things added up
 s = ch("have", { weekStart: w.next, key: it("Hackfleisch").key, have: true }); p = s.plans[w.next];
 ok("12 tick what's at home: it stays ticked; it doesn't go to Bring!", p.shopping.find((x) => x.name === "Hackfleisch").have && !meals.toBuy(w.next).some((x) => x.name === "Hackfleisch") && meals.toBuy(w.next).some((x) => x.name === "Lasagneplatten" && x.spec === "500 g"), meals.toBuy(w.next));
 
+// Bring! both ways: what was sent and is no longer "to buy" there gets ticked here; open ones stay on top
+const buy = meals.toBuy(w.next);
+meals.markSent(w.next, buy, THU);
+let shop = meals.state(THU).plans[w.next].shopping;
+ok("12b sent to Bring!: marked 'in Bring!' until bought", shop.filter((x) => !x.have).every((x) => x.inBring) && Object.keys(meals.waitingOnBring(THU)).length === 1);
+const stillThere = buy.filter((x) => x.name !== "Lasagneplatten" && x.name !== "Mozzarella").map((x) => x.name.toUpperCase());
+ok("12c bought in Bring! (gone from 'to buy') → ticked here; the rest waits", meals.syncBought(stillThere, THU) === 2 &&
+  meals.state(THU).plans[w.next].shopping.find((x) => x.name === "Lasagneplatten").have && !meals.state(THU).plans[w.next].shopping.find((x) => x.name === "Passierte Tomaten").have);
+shop = meals.state(THU).plans[w.next].shopping;
+const firstDone = shop.findIndex((x) => x.have);
+ok("12d the shopping list: still needed on top, what's done below", firstDone > 0 && shop.slice(firstDone).every((x) => x.have) && shop.slice(0, firstDone).every((x) => !x.have), shop.map((x) => `${x.name}${x.have ? "✓" : ""}`));
+ch("have", { weekStart: w.next, key: shop.find((x) => x.name === "Lasagneplatten").key, have: false });
+meals.syncBought(stillThere, THU);
+ok("12e unticked by hand: stays unticked (no longer waiting on Bring!)", !meals.state(THU).plans[w.next].shopping.find((x) => x.name === "Lasagneplatten").have);
+ch("have", { weekStart: w.next, key: shop.find((x) => x.name === "Lasagneplatten").key, have: true });
+
 // calendar + cycle
+
 ok("13 not confirmed: nothing on the calendar yet", meals.calendarEvents(THU).length === 0);
 s = ch("confirm", { weekStart: w.next });
 const evs = meals.calendarEvents(THU);

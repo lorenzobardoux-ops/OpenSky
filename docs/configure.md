@@ -295,9 +295,12 @@ A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on
     account's address (with Hide My Email something like `…@privaterelay.appleid.com`, or one Bring! made);
     **Profile → Settings → More settings → Change password** sets a password (signing in with Apple on the phone
     stays as it is). Put both in phone setup → Extras (choose "Apple" there for these steps).
- Bring! has
-  no official way in for this; OpenSky uses the same unofficial one as Home Assistant's Bring! integration — if
-  Bring! changes it, only sending stops, with a message.
+  - **Back from Bring!:** items sent show "in Bring!"; once they're bought (ticked off in the Bring! app — or removed
+    there), OpenSky ticks them here too: it looks every 2 minutes while something is waiting, and when the meal page
+    or the kitchen page is opened. The list shows what's still needed on top, then "Done — at home or bought".
+    Unticking an item here again keeps it unticked.
+  Bring! has no official way in for this; OpenSky uses the same unofficial one as Home Assistant's Bring! integration — if
+  Bring! changes it, only sending (and ticking off) stops, with a message.
 - Kept in `config/meals.json` (in backups).
 
 ## Photos
@@ -328,10 +331,11 @@ A small trash-can icon appears on pickup days in the week view. It moves a day l
 
 ## Screen and timers
 ```json
-"sidebar": { "idleReturnMinutes": 5 },
+"sidebar": { "idleReturnMinutes": 10 },
 "timer":   { "quickAddMinutes": [5, 10, 15, 30, 45, 60], "chimeVolume": 0.6 }
 ```
-- `idleReturnMinutes`: after this many minutes without a touch, open pop-ups close and the screen returns to the first page. A running timer stays put. `0` turns this off.
+- `idleReturnMinutes`: after this many minutes without a touch (default 10), open pop-ups close and the screen returns to the first page (Start, when it's first). A running timer stays put. `0` turns this off. Phone page: Pages → "Back to the first page after".
+
 - **Sleep** (bottom left) blacks out the screen until the next touch.
 - `quickAddMinutes`: the timer's quick buttons. `chimeVolume` runs from 0 to 1.
 

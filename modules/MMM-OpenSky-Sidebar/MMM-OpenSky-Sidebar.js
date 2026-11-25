@@ -17,7 +17,7 @@ Module.register("MMM-OpenSky-Sidebar", {
     pages: [],                   // [{ key, label, icon, index }] — built by config.js from opensky.json
     familyInitial: "H",
     screenServiceUrl: null,      // e.g. "http://127.0.0.1:5000" when the OpenSky screen service is installed
-    idleReturnMinutes: 5,
+    idleReturnMinutes: 10,
     showSettings: false,         // true once a settings page/module is installed
     accent: null,                // opensky.json → look.accent: a palette color name ("teal") or "#rrggbb"; null = peach
     scale: "auto",               // opensky.json → look.scale: "auto" fits the 1920×1080 design to the screen; or a number (e.g. 1.2)
