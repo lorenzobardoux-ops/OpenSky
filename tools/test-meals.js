@@ -32,7 +32,9 @@ for (const [name, effort, extra] of [["Pfannkuchen", 1, { ingredients: [{ name: 
   ["Linsensuppe", 2, {}], ["Ofengemüse", 2, { servings: 2, ingredients: [{ name: "Zwiebel", amount: 1 }, { name: "Zucchini", amount: 2 }] }], ["Burger", 5, {}]]) ch("saveDish", { dish: { name, effort, ...extra } });
 s = meals.state(THU);
 ok("4 the default servings apply to new dishes (and can be set per dish)", s.settings.defaultServings === 3 && s.dishes.find((x) => x.name === "Pfannkuchen").servings === 3 && s.dishes.find((x) => x.name === "Ofengemüse").servings === 2);
-ok("5 'paprikapulver' is a spice, not a vegetable; 'Lachsfilet' is fish", s.dishes.find((x) => x.name === "Gemüsecurry").ingredients.find((i) => i.name === "Paprikapulver").category === "spices" && meals.guessCategory("Lachsfilet") === "fish");
+ok("5 'paprikapulver' is a spice, not a vegetable; 'Lachsfilet' is fish", s.dishes.find((x) => x.name === "Gemüsecurry").ingredients.find((i) => i.name === "Paprikapulver").category === "spices" && meals.guessCategory("Lachsfilet") === "fish" &&
+  meals.guessCategory("Chilipulver") === "spices" && meals.guessCategory("Backpulver") === "baking" && meals.guessCategory("Kakaopulver") === "baking");
+
 
 
 // rolling

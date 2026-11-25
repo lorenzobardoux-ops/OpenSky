@@ -280,7 +280,10 @@ A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on
 - **Plan the week** (usually on Thursday): a week runs **Saturday to Friday**; a day in the plan is the day a dish is
   **cooked** (for the next day). Pick the cooking days or just a number, the most effort, the servings → **Roll**.
   Roll everything or one dish again, choose dishes yourself, change servings, then **That's it**.
-- **On the screen:** drag a dish onto its cooking day — it shows on the calendar as "Cook: …" (calendar "Meal plan").
+- **On the screen, "Dishes":** every dish; tap one for its ingredients (by shop section, with amounts), effort,
+  cycle and season — and to change or delete it; **+ New dish** adds one with the on-screen keyboard.
+- **On the screen, "Week":** drag a dish onto its cooking day
+ — it shows on the calendar as "Cook: …" (calendar "Meal plan").
   Next to it the **shopping list** for the week, added up and sorted like a shop (vegetables, fruit, dairy, …): tick
   what's at home.
 - **Bring!:** "Send to Bring!" (on the screen or the kitchen page) asks first, then puts every unticked ingredient

@@ -90,7 +90,33 @@ module.exports = async (page, h) => {
   ok("after yes: the unticked ingredients with their amounts are on the Bring! list; the ticked one isn't", sent.includes("Onion|3") && !sent.some((x) => x.startsWith(`${ticked}|`)) && sent.length === 5, sent);   // (6 different ingredients, 1 ticked)
 
 
+  // the screen's dish list: every dish, a dish's ingredients, and a new dish made on the screen
+  await page.evaluate(() => [...document.querySelectorAll(".ml-views button")].find((b) => b.dataset.v === "dishes").click());
+  await h.sleep(300);
+  const listed = await page.evaluate(() => [...document.querySelectorAll(".ml-entry b")].map((b) => b.textContent));
+  await page.evaluate(() => [...document.querySelectorAll(".ml-entry")].find((e) => /Lasagna/.test(e.textContent)).click());
+  await h.sleep(300);
+  const info = await page.evaluate(() => document.querySelector(".ml-pop").innerText);
+  ok("screen: all dishes listed; a tap shows its ingredients with amounts", listed.join() === "Lasagna,Pancakes,Veggie curry" && /Minced beef/.test(info) && /500 g/.test(info), { listed, info });
+  await page.evaluate(() => document.querySelector(".ml-pop .ml-btn.primary").click());
+  await h.tap(".ml-new");
+  await h.sleep(400);
+  const kb = await page.evaluate(() => document.body.classList.contains("kb-open"));
+  await page.evaluate(() => {
+    const set = (el, v) => { el.value = v; el.dispatchEvent(new Event("input")); };
+    const pop = document.querySelector(".ml-pop");
+    set(pop.querySelector(".ml-name-in"), "Tomato soup");
+    const row = pop.querySelector(".ml-ing-edit");
+    set(row.querySelector(".ml-amt-in"), "800"); set(row.querySelector(".ml-unit-in"), "g"); set(row.querySelector(".ml-ing-in"), "Tomatoes");
+    [...pop.querySelectorAll(".ml-pop-actions .ml-btn")].find((b) => b.classList.contains("primary")).click();
+  });
+  await until(async () => (await kitchen("GET", "/api/state")).json.dishes.some((d) => d.name === "Tomato soup"));
+  const soup = (await kitchen("GET", "/api/state")).json.dishes.find((d) => d.name === "Tomato soup");
+  ok("screen: a new dish (the keyboard comes up for its name), saved with its ingredient — the phones see it too", kb && soup && soup.ingredients[0].name === "Tomatoes" && soup.ingredients[0].amount === 800 &&
+    await page.evaluate(() => [...document.querySelectorAll(".ml-entry b")].some((b) => b.textContent === "Tomato soup")), soup);
+
   const f = Object.entries(R).filter(([, v]) => !v).map(([k]) => k);
+
   h.log(`SUMMARY: ${f.length ? "FAILED: " + f.join("; ") : "ALL CHECKS PASSED"} (${Object.keys(R).length} checks)`);
 };
 module.exports.patchSettings = (s) => { s.pages = ["home", "meals", "calendar", "lists", "timer"]; };

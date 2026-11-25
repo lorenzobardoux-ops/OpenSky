@@ -20,6 +20,7 @@ Module.register("MMM-OpenSky-Meals", {
     this.kitchen = { urls: [] };
     this.bringOn = false;
     this.week = null;
+    this.view = "plan";     // "plan" (the week) | "dishes" (all dishes, to see, add and change them here too)
     this.calls = new Map();
     this.seq = 0;
     this.sendSocketNotification("OS_MEALS_INIT", { bringList: this.config.bringList, kitchenPort: this.config.kitchenPort });
@@ -35,6 +36,7 @@ Module.register("MMM-OpenSky-Meals", {
 
   notificationReceived(n) {
     if ((n === "OPENSKY_IDLE_RESET" || n === "PAGE_CHANGED") && this.popup) this.closePopup();
+    if (n === "OPENSKY_IDLE_RESET" && this.view !== "plan") { this.view = "plan"; this.draw(); }
   },
 
   call(op, body) {
@@ -71,23 +73,28 @@ Module.register("MMM-OpenSky-Meals", {
     if (!r) return;
     const s = this.state, M = window.OpenSkyMeals, loc = config.locale || "en-US";
     if (!s) { r.innerHTML = `<div class="ml-empty">${osT("Loading…")}</div>`; return; }
-    const ws = this.weekShown(), p = ws ? s.plans[ws] : null;
-    const both = s.plans[s.weeks.current]?.confirmed && s.plans[s.weeks.next]?.confirmed;
+    const dishesView = this.view === "dishes";
+    const ws = this.weekShown(), p = ws && !dishesView ? s.plans[ws] : null;
+    const both = !dishesView && s.plans[s.weeks.current]?.confirmed && s.plans[s.weeks.next]?.confirmed;
     r.innerHTML = `
       <header class="ml-head">
         <span class="ml-title">${window.OpenSkyIcons ? window.OpenSkyIcons.svg("food") : ""} ${osT("Meal plan")}</span>
+        <span class="ml-tabs ml-views"><button data-v="plan">${osT("Week")}</button><button data-v="dishes">${osT("Dishes")}</button></span>
         <span class="ml-week"></span>
         ${both ? `<span class="ml-tabs"><button data-w="${s.weeks.current}">${osT("This week")}</button><button data-w="${s.weeks.next}">${osT("Next week")}</button></span>` : ""}
         <span class="ml-kitchen"><span class="ml-qr"></span><span class="ml-kitchen-text"><b>${osT("Plan on your phone")}</b><small class="ml-url"></small></span></span>
       </header>
       <div class="ml-body"></div>`;
     r.querySelector(".ml-week").textContent = p ? M.week(ws, loc) : "";
-    r.querySelectorAll(".ml-tabs button").forEach((b) => { b.classList.toggle("on", b.dataset.w === ws); b.onclick = () => { this.week = b.dataset.w; this.draw(); }; });
+    r.querySelectorAll(".ml-tabs:not(.ml-views) button").forEach((b) => { b.classList.toggle("on", b.dataset.w === ws); b.onclick = () => { this.week = b.dataset.w; this.draw(); }; });
+    r.querySelectorAll(".ml-views button").forEach((b) => { b.classList.toggle("on", b.dataset.v === (dishesView ? "dishes" : "plan")); b.onclick = () => { this.view = b.dataset.v; this.draw(); }; });
     const url = this.kitchen.urls[0];
     r.querySelector(".ml-url").textContent = url ? url.replace(/^http:\/\//, "") : osT("The kitchen page isn't running (see opensky logs)");
     if (url && typeof qrcode === "function") { try { const q = qrcode(0, "M"); q.addData(url); q.make(); r.querySelector(".ml-qr").innerHTML = q.createSvgTag({ cellSize: 3, margin: 1, scalable: true }); } catch (e) { /* no QR */ } }
     const body = r.querySelector(".ml-body");
+    if (dishesView) return this.drawDishes(body);
     if (!p) {
+
       const draft = s.plans[s.weeks.next] && !s.plans[s.weeks.next].confirmed;
       body.innerHTML = `<div class="ml-empty"></div>`;
       body.firstChild.textContent = draft ? osT("Next week's plan is a draft — finish it on your phone (\"That's it\").") : osT("No plan for this week yet. Plan it on your phone: scan the code above.");
@@ -188,7 +195,11 @@ Module.register("MMM-OpenSky-Meals", {
       b.onclick = async () => { if (await fn(b)) this.closePopup(); };
       o.querySelector(".ml-pop-actions").appendChild(b);
     }
-    o.addEventListener("click", (e) => { if (e.target === o) this.closePopup(); });
+    // a tap outside closes it — only when the press started outside too (not a drag that ended there)
+    let outside = false;
+    o.addEventListener("pointerdown", (e) => { outside = e.target === o; });
+    o.addEventListener("click", (e) => { if (e.target === o && outside) this.closePopup(); });
+
     document.body.appendChild(o);
     this.popup = o;
   },
@@ -207,7 +218,139 @@ Module.register("MMM-OpenSky-Meals", {
     }, [[osT("Close"), "primary", () => true]]);
   },
 
+  /* ---------------- all dishes (see them, add one, change one — the kitchen page can do the same) ---------------- */
+  drawDishes(body) {
+    const M = window.OpenSkyMeals, dishes = this.state.dishes;
+    body.classList.add("ml-body-dishes");
+    body.innerHTML = `<div class="ml-dish-bar"><span>${osT("{n} dishes", { n: dishes.length })}</span><button class="ml-btn primary ml-new">${osT("+ New dish")}</button></div><div class="ml-catalog"></div>`;
+    body.querySelector(".ml-new").onclick = () => this.editDish(null);
+    const grid = body.querySelector(".ml-catalog");
+    if (!dishes.length) { grid.innerHTML = `<div class="ml-empty"></div>`; grid.firstChild.textContent = osT("No dishes yet. Tap + New dish — or use the kitchen page on your phone."); }
+    for (const d of dishes) {
+      const c = document.createElement("button");
+      c.className = "ml-entry";
+      c.innerHTML = `<b></b><small class="ml-entry-effort"></small><small class="ml-entry-info"></small>`;
+      c.querySelector("b").textContent = d.name;
+      c.querySelector(".ml-entry-effort").textContent = `${M.effort(d.effort)} ${M.effortName(d.effort)}`;
+      c.querySelector(".ml-entry-info").textContent = [osT("{n} ingredients", { n: d.ingredients.length }), this.cycleText(d), d.months.length ? this.monthsText(d.months) : null].filter(Boolean).join(" · ");
+      c.onclick = () => this.dishInfo(d);
+      grid.appendChild(c);
+    }
+    window.OpenSkyDragScroll(body, ".ml-catalog");
+  },
+
+  cycleText(d) { return !d.cycleWeeks ? null : d.cycleWeeks === 1 ? osT("once a week at most") : osT("every {n} weeks at most", { n: d.cycleWeeks }); },
+  monthsText(months) { return months.map((m) => new Date(2000, m - 1, 1).toLocaleDateString(config.locale || "en-US", { month: "short" })).join(", "); },
+
+  // one dish: its ingredients (for the servings it's written for), effort, cycle, season, notes
+  dishInfo(d) {
+    const M = window.OpenSkyMeals;
+    this.popupBox(d.name, (body) => {
+      const sub = document.createElement("p"); sub.className = "ml-pop-small";
+      sub.textContent = [`${M.effort(d.effort)} ${M.effortName(d.effort)}`, osT("for {n} servings", { n: d.servings }), this.cycleText(d),
+        d.months.length ? osT("season: {months}", { months: this.monthsText(d.months) }) : osT("all year")].filter(Boolean).join(" · ");
+      body.appendChild(sub);
+      let cat = null;
+      const list = document.createElement("div"); list.className = "ml-ing-list";
+      const sorted = [...d.ingredients].sort((a, b) => this.state.categories.indexOf(a.category) - this.state.categories.indexOf(b.category));
+      for (const i of sorted) {
+        if (i.category !== cat) { cat = i.category; const h = document.createElement("div"); h.className = "ml-cat"; h.textContent = M.category(cat); list.appendChild(h); }
+        const row = document.createElement("div"); row.className = "ml-ing-row";
+        row.innerHTML = `<span></span><span class="ml-amt"></span>`;
+        row.firstChild.textContent = i.name; row.lastChild.textContent = M.amount(i);
+        list.appendChild(row);
+      }
+      if (!d.ingredients.length) { const e = document.createElement("p"); e.className = "ml-pop-small"; e.textContent = osT("No ingredients yet."); list.appendChild(e); }
+      body.appendChild(list);
+      if (d.notes) { const n = document.createElement("p"); n.className = "ml-notes"; n.textContent = d.notes; body.appendChild(n); }
+    }, [
+      [osT("Delete"), "danger", async (btn) => {
+        if (!btn.classList.contains("confirm")) { btn.classList.add("confirm"); btn.textContent = osT("Tap again to delete"); return false; }
+        const r = await this.change("deleteDish", { id: d.id });
+        if (r.ok) window.OpenSkyToast(osT("Deleted"), "success");
+        return r.ok;
+      }],
+      [osT("Edit"), "", () => { setTimeout(() => this.editDish(d), 0); return true; }],
+      [osT("Close"), "primary", () => true]
+    ]);
+  },
+
+  // add or change a dish on the screen (the on-screen keyboard comes up for the text boxes)
+  editDish(dish) {
+    const M = window.OpenSkyMeals;
+    const d = dish ? JSON.parse(JSON.stringify(dish)) : { name: "", effort: 2, servings: this.state.settings.defaultServings || 2, cycleWeeks: 0, months: [], ingredients: [], notes: "" };
+    if (!d.ingredients.length) d.ingredients.push({ name: "", amount: "", unit: "", category: "" });
+    const input = (cls, value, ph, onin) => { const i = document.createElement("input"); i.className = `ml-input ${cls}`; i.value = value == null ? "" : value; i.placeholder = ph; i.autocomplete = "off"; i.oninput = () => onin(i.value); return i; };
+    const label = (t) => { const s = document.createElement("div"); s.className = "ml-label"; s.textContent = t; return s; };
+    this.popupBox(dish ? osT("Change dish") : osT("New dish"), (body) => {
+      body.parentElement.classList.add("ml-form");
+      const name = input("ml-name-in", d.name, osT("e.g. Lasagne"), (v) => { d.name = v; });
+      name.maxLength = 80;
+      // effort 1–5 and servings
+      const effort = document.createElement("div"); effort.className = "ml-seg";
+      [1, 2, 3, 4, 5].forEach((n) => { const b = document.createElement("button"); b.textContent = String(n); b.classList.toggle("on", d.effort === n); b.onclick = () => { d.effort = n; effort.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); }; effort.appendChild(b); });
+      const serv = document.createElement("div"); serv.className = "ml-stepper";
+      serv.innerHTML = `<button aria-label="${osT("Fewer")}">−</button><b></b><button aria-label="${osT("More")}">+</button><span>${osT("servings")}</span>`;
+      const sv = () => { serv.querySelector("b").textContent = String(d.servings); };
+      serv.querySelectorAll("button")[0].onclick = () => { d.servings = Math.max(1, d.servings - 1); sv(); };
+      serv.querySelectorAll("button")[1].onclick = () => { d.servings = Math.min(20, d.servings + 1); sv(); };
+      sv();
+      // ingredients
+      const ings = document.createElement("div"); ings.className = "ml-ings-edit";
+      const drawIngs = () => {
+        ings.innerHTML = "";
+        d.ingredients.forEach((i, n) => {
+          const row = document.createElement("div"); row.className = "ml-ing-edit";
+          const amt = input("ml-amt-in", i.amount, osT("Amount"), (v) => { i.amount = v; }); amt.dataset.okbCaps = "off";
+          const unit = input("ml-unit-in", i.unit, osT("Unit"), (v) => { i.unit = v; }); unit.dataset.okbCaps = "off";
+          const nm = input("ml-ing-in", i.name, osT("Ingredient"), (v) => { i.name = v; });
+          const cat = document.createElement("select"); cat.className = "ml-input ml-cat-in";
+          cat.innerHTML = `<option value="">${osT("Section: automatic")}</option>` + M.categories().map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+          cat.value = i.category || ""; cat.onchange = () => { i.category = cat.value; };
+          const rm = document.createElement("button"); rm.className = "ml-mini"; rm.textContent = "×"; rm.setAttribute("aria-label", osT("Remove"));
+          rm.onclick = () => { d.ingredients.splice(n, 1); drawIngs(); };
+          row.append(amt, unit, nm, cat, rm);
+          ings.appendChild(row);
+        });
+      };
+      drawIngs();
+      const addIng = document.createElement("button"); addIng.className = "ml-btn ml-add-ing"; addIng.textContent = osT("+ Ingredient");
+      addIng.onclick = () => { d.ingredients.push({ name: "", amount: "", unit: "", category: "" }); drawIngs(); ings.lastElementChild.querySelector(".ml-amt-in").focus(); };
+      // at the earliest again after; season
+      const cyc = document.createElement("select"); cyc.className = "ml-input";
+      cyc.innerHTML = [0, 1, 2, 3, 4, 6, 8, 12, 26].map((n) => `<option value="${n}">${n === 1 ? osT("1 week") : n ? osT("{n} weeks", { n }) : osT("any time")}</option>`).join("");
+      cyc.value = String(d.cycleWeeks || 0); cyc.onchange = () => { d.cycleWeeks = Number(cyc.value); };
+      const months = document.createElement("div"); months.className = "ml-months";
+      for (let m = 1; m <= 12; m++) {
+        const b = document.createElement("button"); b.textContent = new Date(2000, m - 1, 1).toLocaleDateString(config.locale || "en-US", { month: "short" });
+        b.classList.toggle("on", d.months.includes(m));
+        b.onclick = () => { d.months = d.months.includes(m) ? d.months.filter((x) => x !== m) : [...d.months, m]; b.classList.toggle("on"); };
+        months.appendChild(b);
+      }
+      const notes = document.createElement("textarea"); notes.className = "ml-input"; notes.rows = 2; notes.value = d.notes || ""; notes.oninput = () => { d.notes = notes.value; };
+      const err = document.createElement("div"); err.className = "ml-err";
+      body.append(label(osT("Name")), name, label(osT("Effort")), effort, label(osT("The amounts are for")), serv, label(osT("Ingredients")), ings, addIng,
+        label(osT("At the earliest again after")), cyc, label(osT("Season (only in these months)")), months, label(osT("Notes")), notes, err);
+      body._err = err;
+      if (!dish) setTimeout(() => name.focus(), 50);
+    }, [
+      [osT("Cancel"), "", () => { this.sendNotification("HIDE_KEYBOARD"); return true; }],
+      [osT("Save"), "primary", async () => {
+        const err = this.popup && this.popup.querySelector(".ml-err");
+        if (!String(d.name).trim()) { if (err) err.textContent = osT("Please give it a name"); return false; }
+        d.ingredients = d.ingredients.filter((i) => String(i.name || "").trim());
+        const r = await this.call("saveDish", { dish: d });
+        if (!r.ok) { if (err) err.textContent = r.error || osT("Something went wrong"); return false; }
+        this.sendNotification("HIDE_KEYBOARD");
+        window.OpenSkyToast(osT("Saved"), "success");
+        return true;
+      }]
+    ]);
+    window.OpenSkyDragScroll(this.popup, ".ml-pop");
+  },
+
   /* ---------------- drag a dish onto a day ----------------
+
    * Pointer events (touch, and touchscreens that act like a mouse): a press that moves drags a copy, the day under the
    * finger lights up, letting go there sets the dish's cooking day ("no day yet" takes it off). A tap shows the dish. */
   draggable(el, p, e, dish) {
