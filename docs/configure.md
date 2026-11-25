@@ -279,7 +279,10 @@ A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on
   after** N weeks, and a **season** (months; none = all year — out of season it's never picked).
 - **Plan the week** (usually on Thursday): a week runs **Saturday to Friday**; a day in the plan is the day a dish is
   **cooked** (for the next day). Pick the cooking days or just a number, the most effort, the servings → **Roll**.
-  Roll everything or one dish again, choose dishes yourself, change servings, then **That's it**.
+  Roll everything or one dish again, choose dishes yourself, change servings, then **That's it**. On the phone
+  (kitchen page) or on the screen ("Week", **This week / Next week**): a week without a plan shows the roll options
+  there; with a plan, **+ Dish**, **Roll again** and (a draft) **That's it** sit above the days. Tap a dish in the
+  plan for its servings, **Another dish**, **Choose** or **Remove** — this works after "That's it" too.
 - **On the screen, "Dishes":** every dish; tap one for its ingredients (by shop section, with amounts), effort,
   cycle and season — and to change or delete it; **+ New dish** adds one with the on-screen keyboard.
 - **On the screen, "Week":** drag a dish onto its cooking day
@@ -291,8 +294,8 @@ A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on
   "Dosen" count as one). Units that can't be added (1 Dose and 400 g) stay two lines. In a dish, the unit is a menu of
   the usual ones, "Other…" for one of your own; a yellow note says when another dish has the ingredient in a unit that
   doesn't add up, and which.
-- **Bring!:** "Send to Bring!" (on the screen or the kitchen page) asks first, then puts every unticked ingredient
-  with its amount on your Bring! list (`meals.bringList`, empty = the account's default list). Set your Bring! e-mail
+- **Bring!:** "Send to Bring!" (on the screen or the kitchen page) asks first and lists every unticked ingredient,
+  all ticked — tap one to leave it off; the ticked ones go with their amount onto your Bring! list (`meals.bringList`, empty = the account's default list). Set your Bring! e-mail
   and password on the phone setup page → Extras (kept in `secrets.json → bring.email / bring.password`), then
   **Test the connection**.
   - **Signed up to Bring! with Apple** (also with *Hide My Email*): Apple only lets Bring!'s own apps sign in with

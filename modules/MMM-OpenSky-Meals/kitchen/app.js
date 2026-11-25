@@ -211,14 +211,26 @@
     return card;
   }
 
+  // pick what goes: everything still to buy is ticked; untick what shouldn't go
   function sendToBring(need) {
-    sheet(osT("Put these on the Bring! list?"), (b) => b.append(
-      el("p", { class: "hint" }, osT("{n} items go onto your Bring! shopping list (with their amounts). Ticked ones stay off.", { n: need.length })),
-      el("p", { class: "fine" }, need.map((it) => `${it.name}${M.amount(it) ? " (" + M.amount(it) + ")" : ""}`).join(", "))),
+    const picked = new Set(need.map((it) => it.key));
+    let go = null;
+    sheet(osT("Put these on the Bring! list?"), (b) => {
+      const rows = el("div", { class: "bring-picks" });
+      const count = () => { go.textContent = osT("Send {n} to Bring!", { n: picked.size }); go.disabled = !picked.size; all.textContent = picked.size === need.length ? osT("Select none") : osT("Select all"); };
+      const draw = () => rows.replaceChildren(...need.map((it) => el("button", { type: "button", class: `shop-row${picked.has(it.key) ? " pick" : ""}`, onclick: () => { picked.has(it.key) ? picked.delete(it.key) : picked.add(it.key); draw(); count(); } },
+        el("span", { class: "tick" }, picked.has(it.key) ? "✓" : ""), el("span", { class: "shop-name" }, it.name), el("span", { class: "shop-amt" }, M.amount(it)))));
+      const all = el("button", { type: "button", class: "btn small", onclick: () => { if (picked.size === need.length) picked.clear(); else need.forEach((it) => picked.add(it.key)); draw(); count(); } });
+      b.append(el("p", { class: "hint" }, osT("Ticked ones go onto your Bring! list (with their amounts). Tap one to leave it off.")), all, rows);
+      draw();
+      setTimeout(count, 0);
+    },
     [[osT("Cancel"), "", () => {}], [osT("Send to Bring!"), "primary", async () => {
-      try { const r = await api("POST", "/api/bring", { weekStart: week }); toast(osT("{n} items are on the Bring! list \"{list}\"", { n: r.sent.count, list: r.sent.list }), "good"); }
+      if (!picked.size) { toast(osT("Pick at least one item"), "bad"); return false; }
+      try { const r = await api("POST", "/api/bring", { weekStart: week, keys: [...picked] }); toast(osT("{n} items are on the Bring! list \"{list}\"", { n: r.sent.count, list: r.sent.list }), "good"); }
       catch (e) { toast(e.message, "bad"); }
     }]]);
+    go = [...document.querySelectorAll(".sheet-foot .btn.primary")].pop();
   }
 
   /* ---------------- dishes ---------------- */

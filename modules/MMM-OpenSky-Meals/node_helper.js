@@ -2,12 +2,12 @@
  * and "send to Bring!" (lib/bring.js).
  *
 ^ * Screen:  OS_MEALS_INIT → OS_MEALS_STATE {state, kitchen: {urls}, bring: bool}
- *          OS_MEALS_CALL {id, op, body} → OS_MEALS_RESULT {id, ok, error?, state?, sent?}   (op "bring" {weekStart} sends)
+ *          OS_MEALS_CALL {id, op, body} → OS_MEALS_RESULT {id, ok, error?, state?, sent?}   (op "bring" {weekStart, keys?} sends; keys = only those)
  * Kitchen page (always on, home Wi-Fi, NO pairing code — by the family's choice): http://<pi>:8092
  *   It can only see and change dishes and plans (lib/meals.js) and send the shopping list to Bring!: never settings,
  *   passwords or calendars. Same guards as the setup page: only this Pi's own addresses (no DNS tricks), changes need
  *   the X-OpenSky header (a web page elsewhere can't send them), small bodies, strict content security policy.
- *   GET /api/state · POST /api/change {op, body} · POST /api/bring {weekStart}
+ *   GET /api/state · POST /api/change {op, body} · POST /api/bring {weekStart, keys?}
  */
 const NodeHelper = require("node_helper");
 const http = require("http");
@@ -83,7 +83,10 @@ module.exports = NodeHelper.create({
 
   async run(op, body) {
     if (op === "bring") {
-      const items = meals.toBuy(body.weekStart);
+      let items = meals.toBuy(body.weekStart);
+      // only the ones picked (keys); none given = everything still to buy
+      if (Array.isArray(body.keys)) { const want = new Set(body.keys.map(String)); items = items.filter((it) => want.has(it.key)); }
+      if (!items.length) throw new Error(osT("Pick at least one item"));
       const r = await bring.add(items, this.bringList);
       meals.markSent(body.weekStart, items);   // bought there → ticked here (syncBring)
       console.log(`[OpenSky] meals: ${r.count} items sent to Bring!`);
@@ -169,8 +172,8 @@ module.exports = NodeHelper.create({
       catch (e) { return this.send(res, 400, { error: e.message }); }
     }
     if (url.pathname === "/api/bring" && req.method === "POST") {
-      const { weekStart } = await this.body(req);
-      try { return this.send(res, 200, await this.run("bring", { weekStart })); }
+      const { weekStart, keys } = await this.body(req);
+      try { return this.send(res, 200, await this.run("bring", { weekStart, keys: Array.isArray(keys) ? keys.slice(0, 300) : undefined })); }
       catch (e) { return this.send(res, 502, { error: e.message }); }
     }
     return this.send(res, 404, { error: osT("Not found") });

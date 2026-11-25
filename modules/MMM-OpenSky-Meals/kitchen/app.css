@@ -41,3 +41,6 @@
 .unit-box { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .unit-box .input { min-width: 0; }
 .unit-hint { grid-column: 1 / -1; margin: 0; padding: 8px 10px; border-radius: 10px; background: #fff7e0; color: #8a5a00; font-size: 13px; line-height: 1.35; }
+.bring-picks { margin-top: 8px; }
+.bring-picks .shop-row .tick { border-color: #d6ccc5; }
+.bring-picks .shop-row.pick .tick { background: #e1322c; border-color: #e1322c; }
