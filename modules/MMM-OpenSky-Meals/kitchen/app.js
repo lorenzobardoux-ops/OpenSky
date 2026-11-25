@@ -245,13 +245,31 @@
     const err = el("p", { class: "err" });
     sheet(dish ? osT("Change dish") : osT("New dish"), (b) => {
       const ing = el("div", { class: "ings" });
-      const drawIng = () => ing.replaceChildren(...d.ingredients.map((i, n) => el("div", { class: "ing" },
+      // the unit: a menu of the usual ones, "Other…" for one typed in; a hint when another dish has it in a unit that doesn't add up
+      const unitBox = (i, check) => {
+        const choices = M.unitChoices(), known = choices.some(([v]) => v === String(i.unit || ""));
+        const free = el("input", { class: "input unit-free", placeholder: osT("Unit"), maxlength: "12", value: known ? "" : i.unit || "", hidden: known,
+          oninput: (e) => { i.unit = e.target.value.trim(); check(); } });
+        const pick = el("select", { class: "input unit", "aria-label": osT("Unit"), onchange: (e) => {
+          const other = e.target.value === "\u0000other"; free.hidden = !other;
+          i.unit = other ? free.value.trim() : e.target.value; check();
+          if (other) free.focus();
+        } }, ...choices.map(([v, t]) => el("option", { value: v, selected: known && v === String(i.unit || "") }, t)),
+        el("option", { value: "\u0000other", selected: !known }, osT("Other…")));
+        return el("span", { class: "unit-box" }, pick, free);
+      };
+      const drawIng = () => ing.replaceChildren(...d.ingredients.map((i, n) => {
+        const hint = el("p", { class: "unit-hint", hidden: true });
+        const check = () => { hint.textContent = M.unitClashText(S.dishes, d.id, i.name, i.unit); hint.hidden = !hint.textContent; };
+        check();
+        return el("div", { class: "ing" },
         el("input", { class: "input amt", inputmode: "decimal", placeholder: osT("Amount"), value: i.amount ?? "", oninput: (e) => { i.amount = e.target.value; } }),
-        el("input", { class: "input unit", placeholder: osT("Unit"), value: i.unit || "", oninput: (e) => { i.unit = e.target.value; } }),
-        el("input", { class: "input iname", placeholder: osT("Ingredient"), value: i.name || "", oninput: (e) => { i.name = e.target.value; } }),
+        unitBox(i, check),
+        el("input", { class: "input iname", placeholder: osT("Ingredient"), value: i.name || "", oninput: (e) => { i.name = e.target.value; check(); } }),
         (() => { const s = el("select", { class: "input icat", "aria-label": osT("Section"), onchange: (e) => { i.category = e.target.value; } },
           el("option", { value: "" }, osT("Section: automatic")), ...M.categories().map(([k, v]) => el("option", { value: k, selected: k === i.category }, v))); return s; })(),
-        el("button", { type: "button", class: "mini", "aria-label": osT("Remove"), onclick: () => { d.ingredients.splice(n, 1); drawIng(); } }, "×"))));
+        el("button", { type: "button", class: "mini", "aria-label": osT("Remove"), onclick: () => { d.ingredients.splice(n, 1); drawIng(); } }, "×"), hint);
+      }));
       drawIng();
       const months = el("div", { class: "day-picks" });
       [...Array(12)].forEach((_, m) => months.append(el("button", { type: "button", class: `day-pick${d.months.includes(m + 1) ? " on" : ""}`,

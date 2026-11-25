@@ -33,8 +33,11 @@
 .shop-amt { color: var(--muted); font-weight: 600; white-space: nowrap; }
 
 .ings { display: flex; flex-direction: column; gap: 8px; }
-.ing { display: grid; grid-template-columns: 64px 64px 1fr 34px; grid-template-rows: auto auto; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid #f1ebe7; }
+.ing { display: grid; grid-template-columns: 64px 96px minmax(0, 1fr) 34px; grid-template-rows: auto auto; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid #f1ebe7; }
 .ing .icat { grid-column: 1 / 4; min-height: 38px; font-size: 14px; }
 .ing .mini { grid-row: 1; grid-column: 4; width: 34px; height: 44px; border: 0; border-radius: 10px; background: #f3efec; font-size: 20px; }
 .ing .input { min-width: 0; }
 .badge { flex: none; padding: 2px 8px; border-radius: 999px; background: #fde8e7; color: #c62828; font-size: 12px; font-weight: 800; }
+.unit-box { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.unit-box .input { min-width: 0; }
+.unit-hint { grid-column: 1 / -1; margin: 0; padding: 8px 10px; border-radius: 10px; background: #fff7e0; color: #8a5a00; font-size: 13px; line-height: 1.35; }

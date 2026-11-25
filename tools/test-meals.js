@@ -59,7 +59,7 @@ ok("10 a cooking day for a dish (drag on the screen); not outside the week", p.e
 // shopping list
 const sh = p.shopping;
 const it = (n) => sh.find((x) => x.name.toLowerCase() === n.toLowerCase());
-ok("11 shopping list: scaled to the servings (Lasagne ×2), same things added up, sorted like a shop", it("Hackfleisch").amount === 1000 && it("Zwiebel").amount >= 3.5 &&
+ok("11 shopping list: scaled to the servings (Lasagne ×2), same things added up, sorted like a shop", it("Hackfleisch").amount === 1 && it("Hackfleisch").unit === "kg" && it("Zwiebel").amount >= 3.5 &&
 
   sh.findIndex((x) => x.category === "vegetables") < sh.findIndex((x) => x.category === "dairy") && sh.findIndex((x) => x.category === "dairy") < sh.findIndex((x) => x.category === "meat"), sh.map((x) => `${x.name} ${x.amount ?? ""}${x.unit}`));
 s = ch("have", { weekStart: w.next, key: it("Hackfleisch").key, have: true }); p = s.plans[w.next];
@@ -80,6 +80,19 @@ ch("have", { weekStart: w.next, key: shop.find((x) => x.name === "Lasagneplatten
 meals.syncBought(stillThere, THU);
 ok("12e unticked by hand: stays unticked (no longer waiting on Bring!)", !meals.state(THU).plans[w.next].shopping.find((x) => x.name === "Lasagneplatten").have);
 ch("have", { weekStart: w.next, key: shop.find((x) => x.name === "Lasagneplatten").key, have: true });
+
+// units that add up: g + kg, ml + l, EL + TL, none + Stück; others stay apart
+{
+  const u = require(path.join(__dirname, "..", "lib", "client", "meals-shared.js"));
+  const dishes = [
+    { id: "a", name: "A", servings: 2, ingredients: [{ name: "Mehl", amount: 200, unit: "g" }, { name: "Milch", amount: 0.5, unit: "l" }, { name: "Öl", amount: 1, unit: "EL" }, { name: "Ei", amount: 2, unit: "" }, { name: "Tomaten", amount: 1, unit: "Dose" }] },
+    { id: "b", name: "B", servings: 2, ingredients: [{ name: "mehl ", amount: 0.9, unit: "kg" }, { name: "Milch", amount: 250, unit: "ml" }, { name: "Öl", amount: 3, unit: "TL" }, { name: "Ei", amount: 1, unit: "Stück" }, { name: "Tomaten", amount: 400, unit: "g" }] }];
+  const list = meals._shopping({ dishes }, { entries: [{ dishId: "a", servings: 2 }, { dishId: "b", servings: 4 }] });
+  const t = (n) => list.filter((x) => x.name.toLowerCase().trim() === n.toLowerCase()).map((x) => meals.amountText(x)).sort().join(" + ");
+  ok("12f amounts in different units of one kind add up (g+kg, l+ml, EL+TL, none+Stück)", t("Mehl") === "2 kg" && t("Milch") === "1 l" && t("Öl") === "3 EL" && t("Ei") === "4 Stück", list.map((x) => `${x.name} ${meals.amountText(x)}`));
+  ok("12g units that don't add up stay two lines", t("Tomaten") === "1 Dose + 800 g");
+  ok("12h the editor's hint: another dish has it in a unit that doesn't add up", u.sameKind("g", "KG") && u.sameKind("", "Stk.") && !u.sameKind("Dose", "g") && u.unitOf("Prise").kind === "=prise" && u.sameKind("Dose", "Dosen") && u.sameKind("Pck.", "Packung"));
+}
 
 // calendar + cycle
 

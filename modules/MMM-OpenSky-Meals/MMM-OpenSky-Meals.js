@@ -308,14 +308,29 @@ Module.register("MMM-OpenSky-Meals", {
         d.ingredients.forEach((i, n) => {
           const row = document.createElement("div"); row.className = "ml-ing-edit";
           const amt = input("ml-amt-in", i.amount, osT("Amount"), (v) => { i.amount = v; }); amt.dataset.okbCaps = "off";
-          const unit = input("ml-unit-in", i.unit, osT("Unit"), (v) => { i.unit = v; }); unit.dataset.okbCaps = "off";
-          const nm = input("ml-ing-in", i.name, osT("Ingredient"), (v) => { i.name = v; });
+          // the unit: a menu of the usual ones, "Other…" for one typed in
+          const hint = document.createElement("div"); hint.className = "ml-unit-hint";
+          const check = () => { hint.textContent = M.unitClashText(this.state.dishes, d.id, i.name, i.unit); hint.hidden = !hint.textContent; };
+          const unit = document.createElement("div"); unit.className = "ml-unit-box";
+          const pick = document.createElement("select"); pick.className = "ml-input ml-unit-in"; pick.setAttribute("aria-label", osT("Unit"));
+          const choices = M.unitChoices(), known = choices.some(([v]) => v === String(i.unit || ""));
+          [...choices, ["\u0000other", osT("Other…")]].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; pick.appendChild(o); });
+          const free = input("ml-unit-free", known ? "" : i.unit, osT("Unit"), (v) => { i.unit = v.trim(); check(); }); free.dataset.okbCaps = "off"; free.maxLength = 12;
+          pick.value = known ? String(i.unit || "") : "\u0000other"; free.hidden = known;
+          pick.onchange = () => {
+            const other = pick.value === "\u0000other"; free.hidden = !other;
+            i.unit = other ? free.value.trim() : pick.value; check();
+            if (other) setTimeout(() => free.focus(), 0);
+          };
+          unit.append(pick, free);
+          const nm = input("ml-ing-in", i.name, osT("Ingredient"), (v) => { i.name = v; check(); });
           const cat = document.createElement("select"); cat.className = "ml-input ml-cat-in";
           cat.innerHTML = `<option value="">${osT("Section: automatic")}</option>` + M.categories().map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
           cat.value = i.category || ""; cat.onchange = () => { i.category = cat.value; };
           const rm = document.createElement("button"); rm.className = "ml-mini"; rm.textContent = "×"; rm.setAttribute("aria-label", osT("Remove"));
           rm.onclick = () => { d.ingredients.splice(n, 1); drawIngs(); };
-          row.append(amt, unit, nm, cat, rm);
+          row.append(amt, unit, nm, cat, rm, hint);
+          check();
           ings.appendChild(row);
         });
       };

@@ -100,7 +100,11 @@ textarea.ml-input { padding: 10px 14px; resize: none; }
 .ml-stepper b { min-width: 30px; text-align: center; font-size: 22px; }
 .ml-stepper span { color: #6b7280; font-size: 17px; font-weight: 600; }
 .ml-ings-edit { display: flex; flex-direction: column; gap: 8px; }
-.ml-ing-edit { display: grid; grid-template-columns: 100px 100px minmax(0, 1fr) 220px 50px; gap: 8px; }
+.ml-ing-edit { display: grid; grid-template-columns: 100px 140px minmax(0, 1fr) 220px 50px; gap: 8px; align-items: start; }
+.ml-unit-box { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ml-unit-box .ml-input { min-width: 0; }
+.ml-unit-hint { grid-column: 1 / -1; padding: 8px 12px; border-radius: 10px; background: #fff7e0; color: #8a5a00; font-size: 15px; font-weight: 600; line-height: 1.35; }
+.ml-unit-hint[hidden] { display: none; }
 .ml-add-ing { margin-top: 10px; }
 .ml-months { display: flex; flex-wrap: wrap; gap: 8px; }
 .ml-months button { min-height: 44px; padding: 0 14px; border: 2px solid #e5e7eb; border-radius: 999px; background: #fff; color: #4b5563; font: inherit; font-size: 16px; font-weight: 700; }

@@ -286,6 +286,11 @@ A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on
  — it shows on the calendar as "Cook: …" (calendar "Meal plan").
   Next to it the **shopping list** for the week, added up and sorted like a shop (vegetables, fruit, dairy, …): tick
   what's at home.
+- **Units add up:** the same ingredient in several dishes is one line with the amounts added — also across units of
+  one kind (200 g + 0,5 kg = 700 g, 250 ml + 1 l = 1,25 l, 1 EL + 3 TL = 2 EL, 2 + 1 Stück = 3 Stück; "Dose" and
+  "Dosen" count as one). Units that can't be added (1 Dose and 400 g) stay two lines. In a dish, the unit is a menu of
+  the usual ones, "Other…" for one of your own; a yellow note says when another dish has the ingredient in a unit that
+  doesn't add up, and which.
 - **Bring!:** "Send to Bring!" (on the screen or the kitchen page) asks first, then puts every unticked ingredient
   with its amount on your Bring! list (`meals.bringList`, empty = the account's default list). Set your Bring! e-mail
   and password on the phone setup page → Extras (kept in `secrets.json → bring.email / bring.password`), then
