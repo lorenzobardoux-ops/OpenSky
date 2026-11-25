@@ -49,6 +49,8 @@ const i18n = (() => {
   return { tFor: (l, text) => text };
 })();
 const osT = (text, vars) => i18n.tFor(locale.language, text, vars);
+const MEALS_CALENDAR = osT("Meal plan");   // the calendar the meal planner's cooking days show in
+
 
 // Sidebar label + icon for every page OpenSky knows (order of `pages` in opensky.json = order in the sidebar)
 const PAGE_INFO = {
@@ -58,7 +60,8 @@ const PAGE_INFO = {
   smarthome: { label: osT("Smart Home") },
   wordgame: { label: osT("Word Game") },
   timer: { label: osT("Timer") },
-  music: { label: osT("Music") }
+  music: { label: osT("Music") },
+  meals: { label: osT("Meals"), icon: "food" }
 };
 
 // Curbside pickup: trash day + an optional city preset (lib/pickup-presets/<name>.json) + the family's own overrides
@@ -83,7 +86,7 @@ const folderPath = (f) => (!f ? null : /^[~/]/.test(f) ? f : path.join(settingsD
 // Calendar sources (a module with no screen of its own; any page can use the events)
 const cal = s.calendar || {};
 const calendarSources = (Array.isArray(cal.sources) ? cal.sources : []).filter((c) => c && c.name)
-  .filter((c) => c.name !== "Pickup" && c.name !== "Holidays" && c.name !== "OpenSky")   // (names OpenSky uses itself)
+  .filter((c) => !["Pickup", "Holidays", "OpenSky", MEALS_CALENDAR].includes(c.name))   // (names OpenSky uses itself)
   .map((c) => ({ name: String(c.name), type: ["local", "caldav", "google"].includes(c.type) ? c.type : "link", url: c.url || null, color: c.color || null, fetchMinutes: c.fetchMinutes || 5,
     ...(c.type === "google" ? { calendarId: String(c.calendarId || "primary"), readOnly: !!c.readOnly } : {}) }));
 // CalDAV calendars are read through OpenSky's calendar service on this Pi (the account stays in secrets.json)
@@ -109,6 +112,8 @@ if (pk.url) calendarSources.push({ name: "Pickup", type: "link", role: "pickup",
 const homeSettings = s.home || {};
 const templatesOn = homeSettings.panel === "templates" && (Array.isArray(s.pages) && s.pages.length ? s.pages : ["home"]).includes("home");
 if (templatesOn) calendarSources.push({ name: "OpenSky", type: "local", color: "gray", fetchMinutes: 5 });
+// the meal planner (page "meals"): its cooking days on the calendar ("Cook: …", from lib/meals.js; not editable here)
+if ((Array.isArray(s.pages) ? s.pages : []).includes("meals")) calendarSources.push({ name: MEALS_CALENDAR, type: "meals", color: (s.meals && s.meals.color) || "orange", fetchMinutes: 60 });
 const editableCalendars = calendarSources.filter((c) => c.type === "local" || c.type === "caldav" || (c.type === "google" && !c.readOnly))
   .map((c) => ({ name: c.name, type: c.type, ...(c.type === "google" ? { calendarId: c.calendarId } : {}) }));
 const canAddEvents = editableCalendars.length > 0;
@@ -197,8 +202,16 @@ const PAGES = {
       alarm: { volume: (s.timer && s.timer.chimeVolume) ?? 0.6, repeatEverySeconds: 2.5, maxRingSeconds: 180 }
     }
   }],
+  // the meal planner: the week's dishes, the shopping list (→ Bring!), the kitchen page for phones
+  meals: () => [{
+    module: "MMM-OpenSky-Meals",
+    position: "fullscreen_above",
+    config: { bringList: (s.meals && s.meals.bringList) || null, kitchenPort: Number(s.meals && s.meals.kitchenPort) || 8092 }
+  }],
   // the Music add-on (opensky addon music): the speaker name phones show — same rule as services/music/render.js
   music: () => [{
+
+
     module: "MMM-OpenSky-Music",
     position: "fullscreen_above",
     config: {

@@ -530,7 +530,7 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
   }
 
   function pagesCard() {
-    const names = { home: osT("Home"), calendar: osT("Calendar"), lists: osT("Lists"), wordgame: osT("Word Game"), timer: osT("Timer"), music: osT("Music") };
+    const names = { home: osT("Home"), calendar: osT("Calendar"), lists: osT("Lists"), wordgame: osT("Word Game"), timer: osT("Timer"), music: osT("Music"), meals: osT("Meals") };
     for (const [k, e] of Object.entries(S.embeds)) names[k] = (e && e.title) || k;
     const all = [...S.pages.filter((p) => names[p]), ...Object.keys(names).filter((k) => !S.pages.includes(k))];
     const box = el("div", { class: "rows" });
@@ -637,7 +637,24 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
       field(osT("Word game"), seg([["nyt", osT("NYT's daily word")], ["opensky", osT("OpenSky's words")]], wg.source === "opensky" ? "opensky" : "nyt", (v) => { wg.source = v; change(); })),
       ...musicFields(),
       field(osT("Weather from"), seg([["open-meteo", osT("Open-Meteo (free)")], ["openweathermap", "OpenWeatherMap"]], w.provider || "open-meteo", (v) => { w.provider = v; change(); drawWeather(v); })),
-      weatherKey);
+      weatherKey,
+      ...mealFields());
+  }
+
+  // the meal planner (page "Meals"): Bring! for the shopping list, and where the kitchen page is
+  function mealFields() {
+    if (!S.pages.includes("meals")) return [];
+    S.meals = S.meals && typeof S.meals === "object" ? S.meals : {};
+    return [
+      el("h4", { class: "sub-title" }, osT("Meal planner")),
+      el("p", { class: "hint" }, osT("Dishes and the week's plan are on the kitchen page — no code needed: on the screen, the Meals page shows its QR code.")),
+      field(osT("Bring! e-mail"), secretInput("bring.email", osT("The e-mail you sign in to Bring! with"))),
+      field(osT("Bring! password"), secretInput("bring.password", osT("Your Bring! password")),
+        osT("Bring! has no keys for other apps, so the Pi keeps this password (in secrets.json, only on the Pi) to put the shopping list on your Bring! list. It's an unofficial way in: if Bring! changes it, only that stops.")),
+      field(osT("Bring! list"), el("input", { type: "text", class: "input", value: S.meals.bringList || "", placeholder: osT("Empty: your default list"),
+        oninput: (e) => { const v = e.target.value.trim(); if (v) S.meals.bringList = v; else delete S.meals.bringList; change(); } }))
+    ];
+
   }
 
   // Music page: this screen as a speaker (the add-on: name, AirPlay / Spotify) and other speakers to control

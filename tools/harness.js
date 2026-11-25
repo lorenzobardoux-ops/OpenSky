@@ -37,6 +37,9 @@ fs.writeFileSync(LOCAL_LISTS, JSON.stringify({ version: 1, lists: { Groceries: [
 // event templates (Home's templates card), empty each run
 const TEMPLATES = path.join(OUT, "templates.test.json");
 fs.rmSync(TEMPLATES, { force: true });
+// the meal planner's dishes and plans, empty each run
+const MEALS = path.join(OUT, "meals.test.json");
+fs.rmSync(MEALS, { force: true });
 // tools/opensky-start sets LANGUAGE from opensky.json → locale.locale; the harness does the same
 function settingsLanguage() {
   try {
@@ -82,6 +85,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       OPENSKY_DEVICE_SETTINGS: DEVICE,
       OPENSKY_WORDGAME: WORDGAME,
       OPENSKY_TEMPLATES: TEMPLATES,
+      OPENSKY_MEALS: MEALS, OPENSKY_KITCHEN_PORT: "8093",   // (never the real kitchen page's port)
+      OPENSKY_BRING_API: "http://127.0.0.1:9/bring",        // never the real Bring! from tests (a scenario may bring a stand-in)
+
 
       OPENSKY_SETUP_PORT: "8091",
       OPENSKY_WELCOME_FILE: WELCOME,

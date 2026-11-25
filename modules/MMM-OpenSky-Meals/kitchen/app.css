@@ -1,0 +1,39 @@
+/* OpenSky kitchen page — on top of the phone setup page's look (base.css) */
+[hidden] { display: none !important; }
+.jump a.on { background: var(--accent, #e8663f); color: #fff; }
+.card > .seg { margin: 6px 0 14px; }
+.danger-text { color: #c62828 !important; }
+.btn.block + .btn.block { margin-top: 8px; }
+
+.stepper { display: inline-flex; align-items: center; gap: 10px; }
+.stepper .mini { width: 40px; height: 40px; border: 0; border-radius: 12px; background: #f3efec; color: var(--ink); font-size: 22px; font-weight: 700; }
+.step-v { min-width: 26px; text-align: center; font-size: 18px; }
+.with-unit, .serv { display: inline-flex; align-items: center; gap: 8px; }
+.serv small { color: var(--muted); }
+
+.day-picks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.day-pick { min-height: 40px; padding: 0 12px; border: 2px solid #eadfd8; border-radius: 999px; background: #fff; color: var(--ink); font-size: 14px; font-weight: 700; }
+.day-pick.on { border-color: var(--accent, #e8663f); background: #fff1eb; color: #b4532f; }
+
+.plan-rows { display: flex; flex-direction: column; gap: 12px; margin: 10px 0 14px; }
+.plan-row { padding: 14px; border-radius: 16px; background: #fbf8f6; display: flex; flex-direction: column; gap: 10px; }
+.plan-main b { display: block; font-size: 17px; }
+.plan-main small { color: var(--muted); letter-spacing: .5px; }
+.plan-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.day-sel { flex: 1 1 150px; min-width: 0; }
+.plan-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.plan-actions .btn { flex: 1 1 auto; }
+
+.shop-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 6px 4px; border: 0; border-bottom: 1px solid #f1ebe7; background: none; color: var(--ink); font-size: 16px; text-align: left; }
+.shop-row .tick { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #d6ccc5; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; }
+.shop-row.have .tick { background: #2e9e57; border-color: #2e9e57; }
+.shop-row.have .shop-name { color: var(--muted); text-decoration: line-through; }
+.shop-name { flex: 1; }
+.shop-amt { color: var(--muted); font-weight: 600; white-space: nowrap; }
+
+.ings { display: flex; flex-direction: column; gap: 8px; }
+.ing { display: grid; grid-template-columns: 64px 64px 1fr 34px; grid-template-rows: auto auto; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid #f1ebe7; }
+.ing .icat { grid-column: 1 / 4; min-height: 38px; font-size: 14px; }
+.ing .mini { grid-row: 1; grid-column: 4; width: 34px; height: 44px; border: 0; border-radius: 10px; background: #f3efec; font-size: 20px; }
+.ing .input { min-width: 0; }

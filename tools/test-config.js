@@ -116,7 +116,16 @@ ok("23 home.panel \"templates\": the templates card instead of photos, OpenSky's
   mod(tp, "MMM-OpenSky-Home").config.templates === true && mod(tp, "MMM-OpenSky-Home").config.photos.enabled === false &&
   tpSources.filter((c) => c.name === "OpenSky").length === 1 && tpSources.find((c) => c.name === "OpenSky").type === "local" &&
   JSON.stringify(mod(tp, "MMM-OpenSky-Templates").config.calendars) === '["Family"]' && !mod(en, "MMM-OpenSky-Templates"), tpSources);
+const ml = build({ pages: ["home", "meals"], meals: { bringList: "Einkauf", kitchenPort: 8099 }, locale: { language: "de" }, calendar: { sources: [{ name: "Essensplan", url: "https://x/evil.ics" }] } });
+const mlSrc = mod(ml, "MMM-OpenSky-Calendars").config.sources;
+ok("24 page \"meals\": the meal planner (sidebar \"Essen\"), its cooking days on the calendar (a source can't take that name), Bring! list and kitchen port",
+  mod(ml, "MMM-OpenSky-Sidebar").config.pages[1].label === "Essen" && mod(ml, "MMM-OpenSky-Sidebar").config.pages[1].icon === "food" &&
+  mod(ml, "MMM-OpenSky-Meals").config.bringList === "Einkauf" && mod(ml, "MMM-OpenSky-Meals").config.kitchenPort === 8099 &&
+  mlSrc.filter((c) => c.name === "Essensplan").length === 1 && mlSrc.find((c) => c.name === "Essensplan").type === "meals" &&
+  !mod(en, "MMM-OpenSky-Meals") && !mod(en, "MMM-OpenSky-Calendars"), mlSrc);
+
 ok("22 F1 start times: German time on a German screen, the Pi's own otherwise",
+
 
   mod(de, "MMM-OpenSky-Header").config.f1TimeZone === "Europe/Berlin" && mod(en, "MMM-OpenSky-Header").config.f1TimeZone === null);
 

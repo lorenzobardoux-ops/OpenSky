@@ -11,6 +11,7 @@ const { osT } = require(path.join(__dirname, "..", "..", "lib", "client", "i18n.
 const CalendarFetcher = require(path.join(global.root_path, "defaultmodules", "calendar", "calendarfetcher.js"));
 const { secret } = require(path.join(global.root_path, "modules", "opensky-lib", "secrets.js"));
 const local = require(path.join(global.root_path, "modules", "opensky-lib", "local-calendar.js"));
+const meals = require(path.join(__dirname, "..", "..", "lib", "meals.js"));   // the meal plan's cooking days ("meals" source)
 const holidays = require(path.join(global.root_path, "modules", "opensky-lib", "holidays.js"));
 const google = require(path.join(global.root_path, "modules", "opensky-lib", "google-calendar.js"));
 const Log = require("logger");
@@ -36,6 +37,8 @@ module.exports = NodeHelper.create({
     this.localNames = new Set();
     // the on-device calendar changed (event editor) → show it at once
     local.on("change", () => this.localNames.forEach((name) => this.sendLocal(name)));
+    this.mealNames = new Set();
+    meals.on("change", () => this.mealNames.forEach((name) => this.sendMeals(name)));
   },
 
   // to the page (calendar status) and, once per new problem, to the log (`opensky logs`)
@@ -77,6 +80,7 @@ module.exports = NodeHelper.create({
   },
 
   sendLocal(name) { this.sendSocketNotification("OS_CAL_EVENTS", { name, events: local.mmEvents(name) }); },
+  sendMeals(name) { try { this.sendSocketNotification("OS_CAL_EVENTS", { name, events: meals.calendarEvents() }); } catch (e) { this.error(name, e.message); } },
 
   socketNotificationReceived(n, p) {
     if (n === "OS_CAL_REFETCH") {
@@ -88,6 +92,8 @@ module.exports = NodeHelper.create({
     if (n !== "OS_CAL_START" || !p || !Array.isArray(p.sources)) return;
     for (const src of p.sources) {
       if (src.type === "local") { this.localNames.add(src.name); this.sendLocal(src.name); continue; }   // on this Pi
+      if (src.type === "meals") { this.mealNames.add(src.name); this.sendMeals(src.name); continue; }   // the meal plan (lib/meals.js)
+
       if (src.type === "holidays") { this.startHolidays(src); continue; }                                // any country
       if (src.type === "google") { this.startGoogle(src, p.days); continue; }                             // Google Calendar API
       if (this.fetchers.has(src.name)) { this.fetchers.get(src.name).broadcastEvents(); continue; }   // page reload

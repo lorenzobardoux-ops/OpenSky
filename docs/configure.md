@@ -265,7 +265,33 @@ used any number of times. Tap a template to change or delete it; **New** adds on
 
 - Kept in `config/templates.json` (templates + colors); `OpenSky` is a name OpenSky uses itself for a calendar.
 
+## Meal planner
+```json
+"pages": ["home", "meals", "calendar", "lists", "timer"],
+"meals": { "bringList": "", "kitchenPort": 8092, "color": "orange" }
+```
+A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on or off like any page (phone page → Pages).
+- **The kitchen page** for phones: `http://<the Pi>:8092` (the Meals page shows its QR code). It needs **no pairing
+  code**, so anyone on your Wi-Fi can use it — it only reaches dishes and plans, never settings, passwords or
+  calendars. Bookmark it on your phones.
+- **Dishes:** name, ingredients (amount, unit, name; the shop section is picked from the name — change it if it's
+  wrong), effort 1–5, the servings the amounts are for (the standard, 2, can be changed), **at the earliest again
+  after** N weeks, and a **season** (months; none = all year — out of season it's never picked).
+- **Plan the week** (usually on Thursday): a week runs **Saturday to Friday**; a day in the plan is the day a dish is
+  **cooked** (for the next day). Pick the cooking days or just a number, the most effort, the servings → **Roll**.
+  Roll everything or one dish again, choose dishes yourself, change servings, then **That's it**.
+- **On the screen:** drag a dish onto its cooking day — it shows on the calendar as "Cook: …" (calendar "Meal plan").
+  Next to it the **shopping list** for the week, added up and sorted like a shop (vegetables, fruit, dairy, …): tick
+  what's at home.
+- **Bring!:** "Send to Bring!" (on the screen or the kitchen page) asks first, then puts every unticked ingredient
+  with its amount on your Bring! list (`meals.bringList`, empty = the account's default list). Set your Bring! e-mail
+  and password on the phone setup page → Extras (kept in `secrets.json → bring.email / bring.password`). Bring! has
+  no official way in for this; OpenSky uses the same unofficial one as Home Assistant's Bring! integration — if
+  Bring! changes it, only sending stops, with a message.
+- Kept in `config/meals.json` (in backups).
+
 ## Photos
+
 
 ```json
 "photos": { "enabled": true, "provider": "folder", "folder": "~/Pictures", "usb": true, "intervalSeconds": 30 }

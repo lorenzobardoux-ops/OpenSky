@@ -42,7 +42,11 @@ timers, photos, weather and smart-home controls on one screen. Built on [MagicMi
 - **Apple Reminders** lists (also ones shared with family), signed in from the phone page.
 - **Event templates** on Home instead of the photos: standard events to drag onto a day, in their own color, into
   one or several calendars (shown once).
+- **Meal planner** (page "Meals"): dishes with ingredients, effort, cycle and season; roll next week's dishes
+  (Saturday–Friday) on any phone via the kitchen page (no code), drag them onto cooking days (on the calendar), a
+  sorted shopping list to tick off — and send the rest to **Bring!** (asks first).
 - Settings and lists scroll with a finger drag; the Timer's boxes open a number pad.
+
 - Updates with a plain `git pull` on the Pi (below). Details for every setting: [docs/configure.md](docs/configure.md).
 
 ## Install

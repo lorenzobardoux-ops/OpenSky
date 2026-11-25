@@ -50,7 +50,8 @@ const STATIC = {
 };
 const CODE_MINUTES = 10, IDLE_MINUTES = 30;
 // secrets the phone may set (dotted paths under these)
-const SECRET_ROOTS = ["weather.openweathermap.", "lists.todoist.", "homeassistant.", "photos.immich.", "calendar.sources.", "calendar.caldav.", "embeds."];
+const SECRET_ROOTS = ["weather.openweathermap.", "lists.todoist.", "homeassistant.", "photos.immich.", "calendar.sources.", "calendar.caldav.", "embeds.", "bring."];
+
 
 // the Music add-on's speakers, installed by `opensky addon music` (tests: OPENSKY_MUSIC_INSTALLED=spotify,airplay)
 function musicInstalled() {

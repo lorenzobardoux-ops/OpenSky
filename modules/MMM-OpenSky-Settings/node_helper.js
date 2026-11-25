@@ -280,7 +280,7 @@ module.exports = NodeHelper.create({
 
   sendPrefs(extra = {}) {
     const s = this.readSettings();
-    const names = { home: osT("Home"), calendar: osT("Calendar"), lists: osT("Lists"), wordgame: osT("Word Game"), timer: osT("Timer"), music: osT("Music") };
+    const names = { home: osT("Home"), calendar: osT("Calendar"), lists: osT("Lists"), wordgame: osT("Word Game"), timer: osT("Timer"), music: osT("Music"), meals: osT("Meals") };
     for (const [k, e] of Object.entries(s.embeds || {})) names[k] = (e && e.title) || k;
     const pages = Array.isArray(s.pages) ? s.pages.filter((p) => names[p]) : ["home", "timer"];
     this.sendSocketNotification("OS_SET_PREFS", {
