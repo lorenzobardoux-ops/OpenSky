@@ -1,5 +1,7 @@
 /* MMM-OpenSky-Meals node helper — the meal planner's data (lib/meals.js) for the screen, the kitchen page for phones,
- * and "send to Bring!" (lib/bring.js).
+ * "send to Bring!" (lib/bring.js), and the cooking list (a list on the Lists page, lib/lists.js): this week's dishes
+ * go onto it, ticked there = cooked, written there = into the plan (lib/meals.js cookingSync), every 2 minutes and
+ * soon after a change.
  *
 ^ * Screen:  OS_MEALS_INIT → OS_MEALS_STATE {state, kitchen: {urls}, bring: bool}
  *          OS_MEALS_CALL {id, op, body} → OS_MEALS_RESULT {id, ok, error?, state?, sent?}   (op "bring" {weekStart, keys?} sends; keys = only those)
@@ -17,6 +19,7 @@ const path = require("path");
 const LIB = path.join(__dirname, "..", "..", "lib");
 const meals = require(path.join(LIB, "meals.js"));
 const bring = require(path.join(LIB, "bring.js"));
+const lists = require(path.join(LIB, "lists.js"));
 const { osT } = require(path.join(LIB, "client", "i18n.js"));
 
 const PAGE = path.join(__dirname, "kitchen");
@@ -47,6 +50,50 @@ module.exports = NodeHelper.create({
     // what was put on the Bring! list and bought there gets ticked here: checked every 2 minutes while anything waits
     setInterval(() => this.syncBring(), Number(process.env.OPENSKY_BRING_SYNC_MS) || 2 * 60 * 1000);
     setTimeout(() => this.syncBring(), 15 * 1000);
+    // the cooking list: every 2 minutes, and a few seconds after the plan changed
+    meals.on("change", () => { if (!this.cooking) { clearTimeout(this.cookSoon); this.cookSoon = setTimeout(() => this.syncCooking(), 3000); } });
+    setInterval(() => this.syncCooking(), Number(process.env.OPENSKY_COOK_SYNC_MS) || 2 * 60 * 1000);
+    setTimeout(() => this.syncCooking(), 20 * 1000);
+  },
+
+  /** opensky.json → meals.cookingList (a list's name from lists.lists; "" = none), else a list called "Kochliste",
+   *  "Kochen", "Cooking" … — read each time, so the phone page's choice counts after OpenSky restarts the screen. */
+  cookingList() {
+    let s = {};
+    try { s = JSON.parse(fs.readFileSync(process.env.OPENSKY_SETTINGS || path.join(global.root_path || process.cwd(), "config", "opensky.json"), "utf8")); } catch (e) { return null; }
+    const all = (s.lists && Array.isArray(s.lists.lists) ? s.lists.lists : []).filter((l) => l && l.name);
+    const want = s.meals && typeof s.meals.cookingList === "string" ? s.meals.cookingList.trim() : null;
+    if (want === "") return null;   // turned off
+    if (want) return all.find((l) => l.name.toLowerCase() === want.toLowerCase()) || null;
+    return all.find((l) => /^(koch|cook)/i.test(l.name.trim())) || null;
+  },
+
+  async syncCooking() {
+    if (this.cooking) return;
+    const list = this.cookingList();
+    if (!list) return;
+    this.cooking = true;
+    let changed = false;
+    try {
+      const provider = lists.provider(list);
+      for (let round = 0; round < 2; round++) {   // a second look links what was just put on the list
+        const items = await provider.items(list);
+        this.cookSeen = items.map((i) => i.id).join("|");
+        const r = meals.cookingSync(items);
+        for (const it of r.remove) { try { await provider.remove(list, it); changed = true; } catch (e) { /* already gone */ } }
+        for (const it of r.edit) { await provider.edit(list, it, it.text); changed = true; }
+        for (const it of r.add) { await provider.add(list, it.text); changed = true; }
+        if (r.imported || r.cooked) console.log(`[OpenSky] meals: cooking list "${list.name}": ${r.imported} new, ${r.cooked} cooked`);
+        if (!r.add.length) break;
+      }
+      this.lastCookError = null;
+    } catch (e) {
+      if (e.message !== this.lastCookError) console.error(`[OpenSky] meals: cooking list "${list.name}": ${e.message}`);
+      this.lastCookError = e.message;
+    } finally {
+      this.cooking = false;
+      if (changed) this.sendSocketNotification("OS_MEALS_LIST_CHANGED");   // the Lists page fetches it again
+    }
   },
 
   async syncBring() {
@@ -70,7 +117,13 @@ module.exports = NodeHelper.create({
       this.pushState();
       return;
     }
-    if (n === "OS_MEALS_LOOK") { if (Date.now() - (this.lastLook || 0) > 30000) { this.lastLook = Date.now(); this.syncBring(); } return; }
+    // the Lists page fetched its lists (also right after something was ticked there): the cooking list changed → look now
+    if (n === "OS_MEALS_LISTS" && p && Array.isArray(p.lists)) {
+      const list = this.cookingList(), l = list && p.lists.find((x) => x && x.id === list.name);
+      if (l && Array.isArray(l.items) && l.items.map((i) => i.id).join("|") !== this.cookSeen) this.syncCooking();
+      return;
+    }
+    if (n === "OS_MEALS_LOOK") { if (Date.now() - (this.lastLook || 0) > 30000) { this.lastLook = Date.now(); this.syncBring(); this.syncCooking(); } return; }
 
 
     if (n === "OS_MEALS_CALL" && p && p.id) {
@@ -161,7 +214,7 @@ module.exports = NodeHelper.create({
     if (req.method === "POST" && req.headers["x-opensky"] !== "1") return this.send(res, 403, { error: osT("Refused") });
     if (url.pathname === "/api/state" && req.method === "GET") {
       // someone looks at the list: a fresh look at Bring! too (at most every 30 s)
-      if (Date.now() - (this.lastLook || 0) > 30000) { this.lastLook = Date.now(); this.syncBring(); }
+      if (Date.now() - (this.lastLook || 0) > 30000) { this.lastLook = Date.now(); this.syncBring(); this.syncCooking(); }
       return this.send(res, 200, { ...meals.state(), bring: bring.configured() });
     }
 

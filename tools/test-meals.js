@@ -115,6 +115,51 @@ ok("17b nothing fits → a plain message", /Gericht|dish/.test(fails(() => ch("r
 
 s = ch("deleteDish", { id: lasagne.id });
 ok("18 delete a dish: it drops off the plans", !s.dishes.some((x) => x.name === "Lasagne") && !Object.values(s.plans).some((pl) => pl.entries.some((e) => e.dishId === lasagne.id)));
+// the cooking list: this week's plan onto it, ticked there = cooked, written there by hand = into the plan
+{
+  const keep = process.env.OPENSKY_MEALS;
+  process.env.OPENSKY_MEALS = path.join(tmp, "cook.json");
+  const MON = new Date(2026, 10, 23, 18), FRI = new Date(2026, 10, 27, 18), cw = meals.weeks(MON);
+  const c = (op, body, now = MON) => meals.change(op, body, now, rnd);
+  c("saveDish", { dish: { name: "Lasagne", ingredients: [{ name: "Hackfleisch", amount: 500, unit: "g" }] } });
+  let st = c("saveDish", { dish: { name: "Chili", ingredients: [{ name: "Kidneybohnen", amount: 1, unit: "Dose" }] } });
+  const id = (n) => st.dishes.find((x) => x.name === n).id;
+  st = c("choose", { weekStart: cw.current, dishId: id("Lasagne") });
+  let r = meals.cookingSync([], MON);
+  ok("20 a draft isn't put on the cooking list", r.add.length === 0);
+  c("confirm", { weekStart: cw.current });
+  r = meals.cookingSync([], MON);
+  ok("20b this week's plan (confirmed) goes onto the cooking list; not twice while the list hasn't shown it yet", r.add.length === 1 && r.add[0].text === "Lasagne" && meals.cookingSync([], MON).add.length === 0, r);
+  c("choose", { weekStart: cw.next, dishId: id("Chili") });   // Chili planned for next week too: a Chili written by hand is still this week's
+  meals.cookingSync([{ id: "a", text: "Lasagne" }], MON);
+  r = meals.cookingSync([{ id: "a", text: "Lasagne" }, { id: "b", text: "chili " }, { id: "c", text: "Omas Suppe" }], MON);
+  st = meals.state(MON);
+  let cur = st.plans[cw.current];
+  const by = (n) => cur.entries.find((e) => (e.name || st.dishes.find((x) => x.id === e.dishId).name).toLowerCase().trim() === n.toLowerCase());
+  ok("21 written on the list by hand (until Thursday): into this week's plan without a day; a known dish with its ingredients, an unknown one by name only",
+    r.imported === 2 && cur.entries.length === 3 && !st.plans[cw.next].entries[0].listItem && by("Chili").dishId === id("Chili") && by("Chili").day === null && by("Omas Suppe").dishId === null && by("Omas Suppe").fromList &&
+    cur.shopping.some((i) => i.name === "Kidneybohnen") && by("Lasagne").listItem.id === "a", cur.entries);
+  r = meals.cookingSync([{ id: "b", text: "chili " }, { id: "c", text: "Omas Suppe" }], MON);
+  cur = meals.state(MON).plans[cw.current];
+  ok("22 ticked on the list → cooked here (and not put back on the list)", r.cooked === 1 && !!by("Lasagne").cooked && r.add.length === 0 && meals.cookingSync([{ id: "b", text: "chili" }, { id: "c", text: "Omas Suppe" }], MON).add.length === 0);
+  r = meals.cookingSync([{ id: "b", text: "chili" }, { id: "c", text: "Omas Suppe" }, { id: "d", text: "Pizza" }], FRI);
+  st = meals.state(FRI);
+  ok("23 written on the list on Friday: into next week's plan", st.plans[cw.next].entries.some((e) => e.name === "Pizza" && e.fromList), st.plans[cw.next]);
+  st = c("saveDish", { dish: { name: "pizza", ingredients: [{ name: "Mehl", amount: 500, unit: "g" }] } });
+  ok("24 a list-only dish added to the dishes: from then on it's that dish (with ingredients)", st.plans[cw.next].entries.some((e) => e.dishId === id("pizza") && !e.name) && st.plans[cw.next].shopping.some((i) => i.name === "Mehl"));
+  cur = st.plans[cw.current];
+  st = c("remove", { weekStart: cw.current, entryId: by("Omas Suppe").id });
+  r = meals.cookingSync([{ id: "b", text: "chili" }, { id: "c", text: "Omas Suppe" }, { id: "d", text: "Pizza" }], MON);
+  ok("25 taken out of the plan → taken off the list (and not brought back while it's still there)", r.remove.length === 1 && r.remove[0].id === "c" && r.imported === 0 && meals.cookingSync([{ id: "b", text: "chili" }, { id: "d", text: "Pizza" }], MON).remove.length === 0, r);
+  st = c("move", { weekStart: cw.current, entryId: by("Chili").id, to: cw.next });
+  ok("26 moved to next week by hand (no day there)", st.plans[cw.next].entries.some((e) => e.dishId === id("Chili") && e.day === null) && !st.plans[cw.current].entries.some((e) => e.dishId === id("Chili")));
+  st = c("roll", { weekStart: cw.next, count: 1, maxEffort: 5 });
+  ok("27 rolling next week keeps the dishes written on the cooking list", st.plans[cw.next].entries.filter((e) => e.fromList).length === 2 && st.plans[cw.next].entries.length === 3 && !st.plans[cw.next].entries.some((e) => !e.fromList && e.dishId === id("Chili") && !e.listItem), st.plans[cw.next].entries);
+  st = c("cooked", { weekStart: cw.current, entryId: by("Lasagne").id, cooked: false });
+  ok("28 'not cooked yet': back onto the list", meals.cookingSync([{ id: "b", text: "chili" }, { id: "d", text: "Pizza" }], MON).add.some((a) => a.text === "Lasagne"));
+  const ev = meals.calendarEvents(MON);
+  process.env.OPENSKY_MEALS = keep;
+}
 fs.writeFileSync(process.env.OPENSKY_MEALS, "{ broken");
 const orig = console.error; console.error = () => {};
 ok("19 a damaged file: empty, a copy kept", meals.state(THU).dishes.length === 0 && fs.readdirSync(tmp).some((f) => f.includes(".damaged-")));

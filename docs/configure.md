@@ -268,7 +268,7 @@ used any number of times. Tap a template to change or delete it; **New** adds on
 ## Meal planner
 ```json
 "pages": ["home", "meals", "calendar", "lists", "timer"],
-"meals": { "bringList": "", "kitchenPort": 8092, "color": "orange" }
+"meals": { "bringList": "", "kitchenPort": 8092, "color": "orange", "cookingList": "Kochliste" }
 ```
 A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on or off like any page (phone page → Pages).
 - **The kitchen page** for phones: `http://<the Pi>:8092` (the Meals page shows its QR code). It needs **no pairing
@@ -309,6 +309,17 @@ A page **Meals** (sidebar "Essen"/"Meals") for the week's cooking — turn it on
     Unticking an item here again keeps it unticked.
   Bring! has no official way in for this; OpenSky uses the same unofficial one as Home Assistant's Bring! integration — if
   Bring! changes it, only sending (and ticking off) stops, with a message.
+- **The cooking list** (`meals.cookingList`: the name of one of your lists under `lists.lists`, any provider — also a
+  shared Apple Reminders list; left out = a list whose name starts with "Koch"/"Cook"; `""` = off; phone page →
+  Extras → Cooking list):
+  - This week's dishes (once the plan is confirmed) go onto it. Ticked there → the dish shows **cooked** on the Meals
+    page ("Not cooked yet" puts it back).
+  - A dish written on the list by hand comes into the plan **without a day**: Saturday–Thursday into this week,
+    on Friday into next week (tap it → "To next week" / "To this week" to change that). A dish of that name in your
+    dishes comes with its ingredients; any other shows "without ingredients" — tap it → **Add to my dishes** to give
+    it ingredients (from then on it's that dish).
+  - A dish taken out of the plan (or rolled away) is taken off the list. Rolling again keeps the dishes from the list.
+  - Checked every 2 minutes, when the Lists page has fetched the list, and a few seconds after the plan changes.
 - Kept in `config/meals.json` (in backups).
 
 ## Photos

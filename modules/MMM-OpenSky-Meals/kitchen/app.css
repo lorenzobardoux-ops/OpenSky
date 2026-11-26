@@ -44,3 +44,6 @@
 .bring-picks { margin-top: 8px; }
 .bring-picks .shop-row .tick { border-color: #d6ccc5; }
 .bring-picks .shop-row.pick .tick { background: #e1322c; border-color: #e1322c; }
+.free-note { color: #8a5a00 !important; font-weight: 700; }
+.cooked-note { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; padding: 2px 10px; border-radius: 999px; background: #e6f4ea; color: #1e6b3a; font-size: 13px; font-weight: 800; }
+.cooked-note .link { border: 0; background: none; color: #1e6b3a; font-size: 13px; text-decoration: underline; padding: 0; }

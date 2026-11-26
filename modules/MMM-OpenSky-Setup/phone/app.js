@@ -671,6 +671,16 @@ el("div", { class: "pair" }, el("h1", {}, osT("Couldn't load")), el("p", { class
     return [
       el("h4", { class: "sub-title" }, osT("Meal planner")),
       el("p", { class: "hint" }, osT("Dishes and the week's plan are on the kitchen page — no code needed: on the screen, the Meals page shows its QR code.")),
+      // the cooking list: this week's dishes go onto it; ticked there = cooked; written there = into the plan
+      field(osT("Cooking list"), (() => {
+        const names = ((S.lists && S.lists.lists) || []).map((l) => l.name).filter(Boolean);
+        const auto = names.find((n) => /^(koch|cook)/i.test(n.trim()));
+        const cur = typeof S.meals.cookingList === "string" ? S.meals.cookingList : null;
+        return el("select", { class: "input", onchange: (e) => { const v = e.target.value; if (v === "\u0000auto") delete S.meals.cookingList; else S.meals.cookingList = v; change(); } },
+          el("option", { value: "\u0000auto", selected: cur === null }, auto ? osT("Automatic: \"{name}\"", { name: auto }) : osT("Automatic: a list called \"Kochliste\"")),
+          el("option", { value: "", selected: cur === "" }, osT("None")),
+          ...names.map((n) => el("option", { value: n, selected: cur === n }, n)));
+      })(), osT("This week's dishes go onto this list (from Lists); ticked there = cooked. A dish written on it comes into the plan without a day — this week's until Thursday, then next week's.")),
       field(osT("You sign in to Bring! with"), seg([["email", osT("E-mail")], ["apple", "Apple"]], S.meals.bringLogin === "apple" ? "apple" : "email", (v) => {
         if (v === "apple") S.meals.bringLogin = "apple"; else delete S.meals.bringLogin;
         change(); showApple(v);

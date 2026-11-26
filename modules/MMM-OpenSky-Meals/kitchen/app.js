@@ -122,7 +122,7 @@
     if (!p || !p.entries.length) { card.append(rollForm(null)); return card; }
     card.append(el("p", { class: p.confirmed ? "good-note" : "hint" }, p.confirmed ? osT("Done — it's on the screen with its shopping list.") : osT("A draft: change what you like, then tap \"That's it\".")));
     const rows = el("div", { class: "plan-rows" });
-    for (const e of p.entries) rows.append(entryRow(p, e));
+    rows.append(...p.entries.map((e) => entryRow(p, e)).filter(Boolean));
     card.append(rows,
       el("div", { class: "plan-actions" },
         el("button", { type: "button", class: "btn", onclick: () => chooseDish(null) }, osT("+ Add a dish")),
@@ -162,17 +162,23 @@
   }
 
   function entryRow(p, e) {
-    const dish = dishOf(e.dishId);
+    // a dish only written on the cooking list: by its name, without ingredients (until it's added to the dishes)
+    const dish = dishOf(e.dishId) || (e.name ? { name: e.name, effort: 0, free: true } : null);
     if (!dish) return null;
+    const other = week === S.weeks.current ? S.weeks.next : S.weeks.current;
     const daySel = el("select", { class: "input day-sel", onchange: (ev) => change("day", { weekStart: week, entryId: e.id, day: ev.target.value || null }) },
       el("option", { value: "" }, osT("No day yet")), ...p.days.map((d) => el("option", { value: d, selected: d === e.day }, M.day(d, locale(), true))));
     return el("div", { class: "plan-row" },
-      el("div", { class: "plan-main" }, el("b", {}, dish.name), el("small", { title: M.effortName(dish.effort) }, `${M.effort(dish.effort)} · ${M.effortName(dish.effort)}`)),
+      el("div", { class: "plan-main" }, el("b", {}, dish.name),
+        dish.free ? el("small", { class: "free-note" }, osT("without ingredients")) : el("small", { title: M.effortName(dish.effort) }, `${M.effort(dish.effort)} · ${M.effortName(dish.effort)}`),
+        e.cooked ? el("span", { class: "cooked-note" }, osT("cooked"), el("button", { type: "button", class: "link", onclick: () => change("cooked", { weekStart: week, entryId: e.id, cooked: false }) }, osT("Not cooked yet"))) : null),
       el("div", { class: "plan-ctl" }, daySel,
         el("span", { class: "serv" }, stepper(e.servings, 1, 20, (v) => { clearTimeout(e._t); e._t = setTimeout(() => change("servings", { weekStart: week, entryId: e.id, servings: v }), 500); }), el("small", {}, osT("servings")))),
       el("div", { class: "plan-btns" },
-        el("button", { type: "button", class: "btn small", onclick: () => change("reroll", { weekStart: week, entryId: e.id }) }, osT("Roll again")),
-        el("button", { type: "button", class: "btn small", onclick: () => chooseDish(e) }, osT("Choose")),
+        dish.free ? el("button", { type: "button", class: "btn small", onclick: () => editDish(null, dish.name) }, osT("Add to my dishes")) : null,
+        dish.free ? null : el("button", { type: "button", class: "btn small", onclick: () => change("reroll", { weekStart: week, entryId: e.id }) }, osT("Roll again")),
+        dish.free ? null : el("button", { type: "button", class: "btn small", onclick: () => chooseDish(e) }, osT("Choose")),
+        el("button", { type: "button", class: "btn small", onclick: () => change("move", { weekStart: week, entryId: e.id, to: other }) }, other > week ? osT("To next week") : osT("To this week")),
         el("button", { type: "button", class: "btn small danger-text", onclick: () => change("remove", { weekStart: week, entryId: e.id }) }, osT("Remove"))));
   }
 
@@ -252,8 +258,8 @@
         osT("Amounts are for this many servings; the planner scales them.")));
   }
 
-  function editDish(dish) {
-    const d = dish ? JSON.parse(JSON.stringify(dish)) : { name: "", effort: 2, servings: S.settings.defaultServings || 2, cycleWeeks: 0, months: [], ingredients: [{ name: "", amount: "", unit: "", category: "" }], notes: "" };
+  function editDish(dish, presetName) {
+    const d = dish ? JSON.parse(JSON.stringify(dish)) : { name: presetName || "", effort: 2, servings: S.settings.defaultServings || 2, cycleWeeks: 0, months: [], ingredients: [{ name: "", amount: "", unit: "", category: "" }], notes: "" };
     const err = el("p", { class: "err" });
     sheet(dish ? osT("Change dish") : osT("New dish"), (b) => {
       const ing = el("div", { class: "ings" });
